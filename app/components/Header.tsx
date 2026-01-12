@@ -1,6 +1,6 @@
 import { View, Text, Image, TextInput, TouchableOpacity } from 'react-native';
 import React from 'react';
-import { useUser } from "@clerk/clerk-expo";
+import { useUser } from "../context/AuthContext";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
 

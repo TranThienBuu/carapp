@@ -2,7 +2,7 @@ import React, {useEffect, useState} from "react";
 import {Text, View} from "react-native";
 import {collection, getDocs, getFirestore, query, where} from "firebase/firestore";
 import {app} from "../../firebase.config";
-import {useUser} from "@clerk/clerk-expo";
+import {useUser} from "../context/AuthContext";
 import LatestItemList from "../components/LatestItemList";
 import {useNavigation} from "@react-navigation/native";
 

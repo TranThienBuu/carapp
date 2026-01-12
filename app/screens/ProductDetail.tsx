@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
-import { useUser } from "@clerk/clerk-expo";
+import { useUser } from "../context/AuthContext";
 import { doc, deleteDoc, getFirestore, query, where, collection, getDocs, getDoc, setDoc } from "firebase/firestore";
 import { app } from "../../firebase.config";
 

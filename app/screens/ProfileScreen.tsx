@@ -1,6 +1,6 @@
 import React from "react";
 import {FlatList, Image, Text, TouchableOpacity, View} from "react-native";
-import {useAuth, useUser} from "@clerk/clerk-expo";
+import {useAuth, useUser} from "../context/AuthContext";
 import ChinesePanda from "../assets/menuList/ChinesePanda.jpg";
 import {useNavigation} from "@react-navigation/native";
 

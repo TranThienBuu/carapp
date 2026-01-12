@@ -1,6 +1,5 @@
 import React from 'react';
 import {View, Image, TouchableOpacity, StyleSheet, Text} from 'react-native';
-import {useUser} from "@clerk/clerk-expo";
 import {useNavigation} from "@react-navigation/native";
 
 

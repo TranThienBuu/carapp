@@ -19,7 +19,7 @@ import { Formik } from "formik";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser } from "../context/AuthContext";
 
 interface CategoryItem {
     name: string;

@@ -1,27 +1,35 @@
 import React from "react";
 import {ImageBackground, Text, TouchableOpacity, View, StyleSheet} from "react-native";
-import {useOAuth} from "@clerk/clerk-expo";
-import {useWarmUpBrowser} from "../components/SignInWithOAuth";
+import {useAuth} from "../context/AuthContext";
 import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
+
 const LoginScreen=()=>{
-    useWarmUpBrowser();
+    const { signInWithGoogle } = useAuth();
 
-    const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
-
-    const onPress = React.useCallback(async () => {
+    const onPress = async () => {
         try {
-            const { createdSessionId, signIn, signUp, setActive } =
-                await startOAuthFlow();
-
-            if (createdSessionId) {
-                setActive?.({ session: createdSessionId });
-            } else {
-                // Use signIn or signUp for next steps such as MFA
-            }
+            await signInWithGoogle();
         } catch (err) {
             console.error("OAuth error", err);
         }
-    }, [startOAuthFlow]);
+    };
+
+    // Demo login for testing without Google OAuth setup
+    const onDemoLogin = async () => {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const demoUser = {
+            id: 'demo-user',
+            fullName: 'Demo User',
+            imageUrl: 'https://via.placeholder.com/150',
+            primaryEmailAddress: { emailAddress: 'demo@example.com' },
+            email: 'demo@example.com',
+        };
+        await AsyncStorage.setItem('user', JSON.stringify(demoUser));
+        // Force reload to trigger context update
+        window.location.reload();
+    };
 
     return (
         <ImageBackground source={require("../assets/bg.jpg")} style={styles.backgroundImage} >
@@ -33,6 +41,14 @@ const LoginScreen=()=>{
                 <TouchableOpacity className="mt-20" onPress={onPress}>
                     <Text className="text-[32px]">Get started</Text>
                 </TouchableOpacity>
+                
+                <TouchableOpacity className="mt-10 p-3 bg-gray-700 rounded-lg" onPress={onDemoLogin}>
+                    <Text className="text-white text-[16px]">Skip Login (Demo Mode)</Text>
+                </TouchableOpacity>
+                
+                <Text className="text-[12px] text-gray-600 mt-5 px-10 text-center">
+                    Note: Google Sign-In requires OAuth setup. Use Demo Mode to test the app.
+                </Text>
             </View>
         </View>
         </ImageBackground>
