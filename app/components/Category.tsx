@@ -12,7 +12,7 @@ export default function Category({categoryList}) {
         <View className="mt-5">
             <Text className="font-bold text-[20px] ">Categories</Text>
             <FlatList
-
+                scrollEnabled={false}
                 data={categoryList}
                 numColumns={3}
                 keyExtractor={(item, index) => index.toString()}

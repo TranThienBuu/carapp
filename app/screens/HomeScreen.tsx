@@ -76,6 +76,7 @@ export default function HomeScreen() {
 
     return (
         <ScrollView
+            nestedScrollEnabled={true}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }

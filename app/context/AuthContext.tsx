@@ -5,6 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Configuration: Set to true to enable Google OAuth (requires valid Client IDs)
+const ENABLE_GOOGLE_AUTH = true;
+
 interface User {
   id: string;
   fullName: string | null;
@@ -18,6 +21,8 @@ interface AuthContextType {
   isLoaded: boolean;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInDemo: () => Promise<void>;
+  isGoogleAuthEnabled: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +30,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoaded: false,
   signOut: async () => {},
   signInWithGoogle: async () => {},
+  signInDemo: async () => {},
+  isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -37,11 +44,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: '105906920756-YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-    androidClientId: '105906920756-YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-    webClientId: '105906920756-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-  });
+  // Google OAuth Client IDs
+  const googleAuthConfig = {
+    iosClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-ios-client-id',
+    androidClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-android-client-id',
+    webClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-web-client-id',
+    expoClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-expo-client-id',
+  };
+
+  const [request, response, promptAsync] = Google.useAuthRequest(googleAuthConfig);
 
   // Load user from AsyncStorage on mount
   useEffect(() => {
@@ -105,10 +116,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    if (!ENABLE_GOOGLE_AUTH) {
+      throw new Error('Google Authentication is disabled. Please use Demo Mode.');
+    }
     try {
-      await promptAsync();
+      const result = await promptAsync();
+      if (result.type === 'error') {
+        console.error('Google Sign-In Error:', result.error);
+        throw new Error('Failed to authenticate with Google. Please check OAuth configuration.');
+      }
     } catch (error) {
       console.error('Google Sign-In Error:', error);
+      throw error;
+    }
+  };
+
+  const signInDemo = async () => {
+    try {
+      const demoUser: User = {
+        id: 'demo-user-' + Date.now(),
+        fullName: 'Demo User',
+        imageUrl: 'https://ui-avatars.com/api/?name=Demo+User&background=4ade80&color=fff&size=200',
+        primaryEmailAddress: { emailAddress: 'demo@plantu.app' },
+        email: 'demo@plantu.app',
+      };
+      setUser(demoUser);
+      await AsyncStorage.setItem('user', JSON.stringify(demoUser));
+    } catch (error) {
+      console.error('Demo Sign-In Error:', error);
+      throw error;
     }
   };
 
@@ -122,7 +158,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoaded, signOut, signInWithGoogle }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoaded, 
+      signOut, 
+      signInWithGoogle, 
+      signInDemo,
+      isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH 
+    }}>
       {children}
     </AuthContext.Provider>
   );

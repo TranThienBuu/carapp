@@ -32,6 +32,7 @@ export default function ExploreScreen() {
     return (
         <ScrollView
             className="p-5 py-8"
+            nestedScrollEnabled={true}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }

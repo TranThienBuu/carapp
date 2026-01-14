@@ -1,54 +1,114 @@
-import React from "react";
-import {ImageBackground, Text, TouchableOpacity, View, StyleSheet} from "react-native";
+import React, { useState } from "react";
+import {ImageBackground, Text, TouchableOpacity, View, StyleSheet, Alert, ActivityIndicator} from "react-native";
 import {useAuth} from "../context/AuthContext";
 import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen=()=>{
-    const { signInWithGoogle } = useAuth();
+    const { signInWithGoogle, signInDemo, isGoogleAuthEnabled } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
 
-    const onPress = async () => {
+    const handleGoogleLogin = async () => {
+        if (!isGoogleAuthEnabled) {
+            Alert.alert(
+                "Tính năng không khả dụng",
+                "Google Sign-In hiện đang bị tắt. Vui lòng sử dụng Demo Mode để vào app.",
+                [{ text: "OK" }]
+            );
+            return;
+        }
+        
         try {
+            setIsLoading(true);
             await signInWithGoogle();
-        } catch (err) {
+        } catch (err: any) {
             console.error("OAuth error", err);
+            Alert.alert(
+                "Lỗi đăng nhập",
+                err.message || "Không thể đăng nhập với Google.",
+                [{ text: "OK" }]
+            );
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    // Demo login for testing without Google OAuth setup
-    const onDemoLogin = async () => {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        const demoUser = {
-            id: 'demo-user',
-            fullName: 'Demo User',
-            imageUrl: 'https://via.placeholder.com/150',
-            primaryEmailAddress: { emailAddress: 'demo@example.com' },
-            email: 'demo@example.com',
-        };
-        await AsyncStorage.setItem('user', JSON.stringify(demoUser));
-        // Force reload to trigger context update
-        window.location.reload();
+    const handleDemoLogin = async () => {
+        try {
+            setIsLoading(true);
+            await signInDemo();
+        } catch (err: any) {
+            console.error("Demo login error", err);
+            Alert.alert(
+                "Lỗi",
+                "Không thể đăng nhập Demo Mode. Vui lòng thử lại.",
+                [{ text: "OK" }]
+            );
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <ImageBackground source={require("../assets/bg.jpg")} style={styles.backgroundImage} >
         <View className="flex-1 bg-white">
+            <View className="flex-1 items-center justify-center bg-green-900 bg-gradient-to-bl px-8">
+                {/* Logo & Title */}
+                <View className="items-center mb-12">
+                    <Text className="text-white text-[48px] font-bold">🌱</Text>
+                    <Text className="text-white text-[32px] font-bold mt-2">Plantu</Text>
+                    <Text className="text-white text-[16px] mt-1">Mua bán cây cảnh dễ dàng</Text>
+                </View>
 
-            <View className="flex-1 items-center justify-center bg-green-900 bg-gradient-to-bl">
-                <Text className="text-[24px]">Planto!</Text>
-                <Text className="text-[18px]">Buy - Sell Your Plants </Text>
-                <TouchableOpacity className="mt-20" onPress={onPress}>
-                    <Text className="text-[32px]">Get started</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity className="mt-10 p-3 bg-gray-700 rounded-lg" onPress={onDemoLogin}>
-                    <Text className="text-white text-[16px]">Skip Login (Demo Mode)</Text>
-                </TouchableOpacity>
-                
-                <Text className="text-[12px] text-gray-600 mt-5 px-10 text-center">
-                    Note: Google Sign-In requires OAuth setup. Use Demo Mode to test the app.
-                </Text>
+                {/* Login Buttons */}
+                <View className="w-full items-center">
+                    {/* Demo Login - Primary */}
+                    <TouchableOpacity 
+                        className="w-full max-w-xs p-4 bg-white rounded-xl shadow-lg" 
+                        onPress={handleDemoLogin}
+                        disabled={isLoading}
+                        style={styles.primaryButton}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color="#16a34a" />
+                        ) : (
+                            <View className="flex-row items-center justify-center">
+                                <Text className="text-[20px] mr-2">🚀</Text>
+                                <Text className="text-green-600 text-[18px] font-bold">
+                                    Vào App Ngay
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    {/* Google Login - Secondary (if enabled) */}
+                    {isGoogleAuthEnabled && (
+                        <TouchableOpacity 
+                            className="w-full max-w-xs p-3 bg-white/20 rounded-xl mt-3 border-2 border-white" 
+                            onPress={handleGoogleLogin}
+                            disabled={isLoading}
+                        >
+                            <View className="flex-row items-center justify-center">
+                                <Text className="text-white text-[16px] font-semibold">
+                                    Đăng nhập với Google
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Info Message */}
+                <View className="mt-10 px-6">
+                    <Text className="text-white/80 text-[12px] text-center">
+                        ✨ Không cần đăng ký - Bắt đầu ngay lập tức
+                    </Text>
+                    {!isGoogleAuthEnabled && (
+                        <Text className="text-white/60 text-[11px] text-center mt-2">
+                            (Google Sign-In tạm thời không khả dụng)
+                        </Text>
+                    )}
+                </View>
             </View>
         </View>
         </ImageBackground>
@@ -57,11 +117,17 @@ const LoginScreen=()=>{
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-
     backgroundImage: {
         flex: 1,
         resizeMode: 'cover',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    primaryButton: {
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
     },
 })
