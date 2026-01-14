@@ -77,9 +77,9 @@ export default function AddPostScreen() {
             value.userEmail = user.primaryEmailAddress?.emailAddress;
             value.userImage = user.imageUrl;
 
-            const docRef = await addDoc(collection(db, "plants"), value);
+            const docRef = await addDoc(collection(db, "cars"), value);
             if (docRef.id) {
-                Alert.alert("Success!", "Post added successfully.");
+                Alert.alert("Đăng thành công!", "Bài đăng của bạn đã được thêm vào.");
             }
         } catch (error) {
             console.error("Error adding post: ", error);
@@ -95,7 +95,7 @@ export default function AddPostScreen() {
     return (
         <KeyboardAvoidingView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.title}>Đăng bán cây của bạn ở đây nhé!</Text>
+                <Text style={styles.title}>Đăng bán xe của bạn ở đây!</Text>
                 <Text style={styles.subTitle}>*Liên hệ trực tiếp với chúng mình nếu bạn gặp trục trặc.</Text>
                 <Formik
                     initialValues={{
@@ -114,8 +114,8 @@ export default function AddPostScreen() {
                     validate={(values) => {
                         const errors: any = {};
                         if (!values.title) {
-                            ToastAndroid.show("Title is required", ToastAndroid.SHORT);
-                            errors.title = "Title is required";
+                            ToastAndroid.show("Vui lòng nhập tên sản phẩm", ToastAndroid.SHORT);
+                            errors.title = "Tên sản phẩm là bắt buộc";
                         }
                         return errors;
                     }}
@@ -132,27 +132,27 @@ export default function AddPostScreen() {
 
                             <TextInput
                                 style={styles.input}
-                                placeholder="Tên mặt hàng"
+                                placeholder="Tên xe (VD: Honda City 2023)"
                                 value={values.title}
                                 onChangeText={handleChange("title")}
                             />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Mô tả"
+                                placeholder="Mô tả chi tiết về xe"
                                 value={values.description}
                                 numberOfLines={5}
                                 onChangeText={handleChange("description")}
                             />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Giá"
+                                placeholder="Giá (VD: 500.000.000 VNĐ)"
                                 value={values.price}
                                 keyboardType="number-pad"
                                 onChangeText={handleChange("price")}
                             />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Địa chỉ mặt hàng"
+                                placeholder="Địa chỉ xe (VD: Hà Nội)"
                                 value={values.address}
                                 onChangeText={handleChange("address")}
                             />
@@ -173,7 +173,7 @@ export default function AddPostScreen() {
                                 {loading ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.submitButtonText}>Submit</Text>
+                                    <Text style={styles.submitButtonText}>Đăng bài</Text>
                                 )}
                             </TouchableOpacity>
                         </View>

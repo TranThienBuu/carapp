@@ -52,19 +52,19 @@ export default function ProductDetail({ navigation }) {
     }
 
     const sendEmailMessage = () => {
-        const subject = "Regarding " + product.title;
-        const body = "Chào " + product.userName + "\n" + "Tôi muốn mua món hàng này ";
+        const subject = "Liên hệ về " + product.title;
+        const body = "Chào " + product.userName + "\n" + "Tôi muốn mua xe này ";
         Linking.openURL("mailto:" + product.userEmail + "?subject=" + subject + "&body=" + body);
     }
 
     const deleteUserPost = () => {
-        Alert.alert('Are your sure you want to delete the product?', "Are your sure you want to delete the product?", [
+        Alert.alert('Xác nhận xóa', "Bạn có chắc chắn muốn xóa sản phẩm này không?", [
             {
-                text: "Yes",
+                text: "Xóa",
                 onPress: () => deleteFromFirestore()
             },
             {
-                text: "Cancel",
+                text: "Hủy",
                 onPress: () => console.log("Cancel pressed"),
                 style: "cancel",
             }
@@ -73,7 +73,7 @@ export default function ProductDetail({ navigation }) {
 
     const deleteFromFirestore = async () => {
         console.log("Deleted");
-        const q = query(collection(db, "plants"), where("title", "==", product.title));
+        const q = query(collection(db, "cars"), where("title", "==", product.title));
         const snapshot = await getDocs(q);
         snapshot.forEach(doc => {
             deleteDoc(doc.ref).then(resp => {
@@ -124,7 +124,7 @@ export default function ProductDetail({ navigation }) {
                 }
                 await setDoc(cartRef, cartData, { merge: true });
 
-               ToastAndroid.show("product has been added successfully!", ToastAndroid.SHORT)
+               ToastAndroid.show("Đã thêm vào giỏ hàng thành công!", ToastAndroid.SHORT)
             } catch (error) {
                 console.error("Error adding to cart: ", error);
             } finally {
@@ -167,13 +167,13 @@ export default function ProductDetail({ navigation }) {
                         </View>
 
                         <TouchableOpacity onPress={() => handleAddToCart(product)} disabled={loading}>
-                            <Text className="text-[16px] font-bold">Add to Cart</Text>
+                            <Text className="text-[16px] font-bold">Thêm vào giỏ</Text>
                         </TouchableOpacity>
                     </View>
                         }
                     </View>
                 </View>
-                <Text className="text-[20px] mt-5 font-semibold">Description</Text>
+                <Text className="text-[20px] mt-5 font-semibold">Mô tả</Text>
                 <Text className="text-[18px] text-gray-700">{product?.description}</Text>
             </View>
 
@@ -196,14 +196,14 @@ export default function ProductDetail({ navigation }) {
                     <TouchableOpacity className="z-40 bg-red-500 rounded-full p-3 m-2"
                                       onPress={() => deleteUserPost()}
                     >
-                        <Text className="text-center">Delete Post</Text>
+                        <Text className="text-white text-center font-bold">Xóa bài đăng</Text>
                     </TouchableOpacity>
                 </View>
                 :
-                <TouchableOpacity className="z-40 bg-gray-400 rounded-full p-3 m-2"
+                <TouchableOpacity className="z-40 bg-green-600 rounded-full p-3 m-2"
                                   onPress={() => sendEmailMessage()}
                 >
-                    <Text className="text-center">Send message</Text>
+                    <Text className="text-white text-center font-bold">Gửi tin nhắn</Text>
                 </TouchableOpacity>
             }
         </ScrollView>

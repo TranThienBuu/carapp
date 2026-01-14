@@ -15,7 +15,7 @@ export default function ExploreScreen() {
 
     const getAllProducts = async () => {
         setProductList([]);
-        const q = query(collection(db, "plants"), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "cars"), orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
         snapshot.forEach((doc) => {
             setProductList(productList => [...productList, doc.data()]);

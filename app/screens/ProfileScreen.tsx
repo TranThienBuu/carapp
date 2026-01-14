@@ -27,28 +27,28 @@ signOut();
     const menuList=[
         {
             id:1,
-            name:"Sản Phẩm của tôi",
+            name:"Sản phẩm của tôi",
             icon:ChinesePanda,
             path: "my-products",
 
         },
          {
             id:2,
-            name:"Explore",
+            name:"Khám phá",
             icon:ChinesePanda,
              path: "explore-nav",
 
         },
          {
             id:3,
-            name:"Tube",
+            name:"Hướng dẫn",
             icon:ChinesePanda,
              url:"",
 
         },
          {
             id:4,
-            name:"Logout",
+            name:"Đăng xuất",
             icon:ChinesePanda,
 
         },

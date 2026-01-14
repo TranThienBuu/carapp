@@ -56,9 +56,9 @@ const LoginScreen=()=>{
             <View className="flex-1 items-center justify-center bg-green-900 bg-gradient-to-bl px-8">
                 {/* Logo & Title */}
                 <View className="items-center mb-12">
-                    <Text className="text-white text-[48px] font-bold">🌱</Text>
-                    <Text className="text-white text-[32px] font-bold mt-2">Plantu</Text>
-                    <Text className="text-white text-[16px] mt-1">Mua bán cây cảnh dễ dàng</Text>
+                    <Text className="text-white text-[48px] font-bold">🚗</Text>
+                    <Text className="text-white text-[32px] font-bold mt-2">CarApp</Text>
+                    <Text className="text-white text-[16px] mt-1">Mua bán xe hơi dễ dàng</Text>
                 </View>
 
                 {/* Login Buttons */}

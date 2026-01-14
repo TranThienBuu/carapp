@@ -14,7 +14,7 @@ const Slider: React.FC<SliderProps> = ({ sliderList }) => {
 
     return (
         <View className="mt-5">
-            <Text>Selections for you hehehe!</Text>
+            <Text className="font-semibold text-[16px]">Gợi ý cho bạn!</Text>
             <FlatList
                 data={sliderList}
                 keyExtractor={(_, index) => index.toString()}

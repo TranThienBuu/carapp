@@ -18,7 +18,7 @@ export default function Header({ onSearch }) {
                         className="rounded-full w-12 h-12"
                     />
                     <View>
-                        <Text className="text-[16px]">Welcome</Text>
+                        <Text className="text-[16px]">Xin chào</Text>
                         <Text className="text-[20px] font-bold">{user?.fullName}</Text>
                     </View>
                 </View>
@@ -31,7 +31,7 @@ export default function Header({ onSearch }) {
                 <MaterialIcons name="search" size={24} color="gray" />
                 <TextInput
                     className="ml-2 text-[18px]"
-                    placeholder={"Search"}
+                    placeholder={"Tìm kiếm"}
                     onChangeText={onSearch}
                 />
             </View>

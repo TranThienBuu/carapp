@@ -52,7 +52,7 @@ export default function HomeScreen() {
 
     const getLatestItemList = async () => {
         setLatestItemList([]);
-        const querySnapshot = await getDocs(collection(db, "plants"));
+        const querySnapshot = await getDocs(collection(db, "cars"));
         querySnapshot.forEach((doc) => {
             console.log(doc.data());
             setLatestItemList(latestItemList => [...latestItemList, doc.data()]);
@@ -87,7 +87,7 @@ export default function HomeScreen() {
                 <Category categoryList={categoryList} />
                 <LatestItemList
                     latestItemList={filteredItems}
-                    heading={"Latest Items"}
+                    heading={"Sản phẩm mới nhất"}
                 />
             </View>
         </ScrollView>

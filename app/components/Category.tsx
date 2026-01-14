@@ -10,7 +10,7 @@ export default function Category({categoryList}) {
     const navigation = useNavigation();
     return (
         <View className="mt-5">
-            <Text className="font-bold text-[20px] ">Categories</Text>
+            <Text className="font-bold text-[20px] ">Danh mục</Text>
             <FlatList
                 scrollEnabled={false}
                 data={categoryList}

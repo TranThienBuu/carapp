@@ -30,7 +30,7 @@ navigation.addListener("focus",(e)=>{
 
     const getUSerPost=async ()=>{
         setProductList([]);
-        const q=query(collection(db, "plants"), where("userEmail", "==",
+        const q=query(collection(db, "cars"), where("userEmail", "==",
         user?.primaryEmailAddress?.emailAddress))
         const snapshot= await getDocs(q);
         snapshot.forEach(doc=>{

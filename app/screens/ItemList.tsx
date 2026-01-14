@@ -19,7 +19,7 @@ export default function ItemList() {
     const getItemListByCategory = async () => {
         setItemList([]);
         setLoading(true);
-        const q=query(collection(db, "plants"), where("category", "==", params.category));
+        const q=query(collection(db, "cars"), where("category", "==", params.category));
         const snapshot=await  getDocs(q);
         setLoading(false)
         snapshot.forEach(doc=>{
@@ -35,7 +35,7 @@ export default function ItemList() {
             :
             itemList?.length>0? <LatestItemList latestItemList={itemList}
             heading={""}/>
-            :<Text className="p-5 justify-center mt-28 text-center text-[20px] text-gray-500">No Post Found</Text>}
+            :<Text className="p-5 justify-center mt-28 text-center text-[20px] text-gray-500">Không tìm thấy sản phẩm</Text>}
             </View>
     )
 }
