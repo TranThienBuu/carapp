@@ -46,10 +46,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Google OAuth Client IDs
   const googleAuthConfig = {
-    iosClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-ios-client-id',
-    androidClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-android-client-id',
-    webClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-web-client-id',
-    expoClientId: ENABLE_GOOGLE_AUTH ? '797057144456-b8gs42n1ar8ekt1es4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-expo-client-id',
+    iosClientId: ENABLE_GOOGLE_AUTH ? '79705714456-b8qs42n1ar8etktes4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-ios-client-id',
+    androidClientId: ENABLE_GOOGLE_AUTH ? '79705714456-b8qs42n1ar8etktes4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-android-client-id',
+    webClientId: ENABLE_GOOGLE_AUTH ? '79705714456-b8qs42n1ar8etktes4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-web-client-id',
+    expoClientId: ENABLE_GOOGLE_AUTH ? '79705714456-b8qs42n1ar8etktes4md362mq7fn3b88.apps.googleusercontent.com' : 'dummy-expo-client-id',
+    redirectUri: 'https://auth.expo.io/@anonymous/carapp',
   };
 
   const [request, response, promptAsync] = Google.useAuthRequest(googleAuthConfig);
