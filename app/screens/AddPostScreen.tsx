@@ -50,7 +50,7 @@ export default function AddPostScreen() {
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [4, 4],
             quality: 1,
@@ -65,24 +65,61 @@ export default function AddPostScreen() {
         setLoading(true);
         try {
             if (image) {
+                console.log('📸 Bắt đầu upload ảnh:', image);
                 const resp = await fetch(image);
                 const blob = await resp.blob();
-                const storageRef = ref(storage, 'communityPost/' + Date.now() + ".jpg");
+                
+                const fileName = `communityPost/${Date.now()}.jpg`;
+                const storageRef = ref(storage, fileName);
+                
+                console.log('⬆️ Uploading to:', fileName);
                 await uploadBytes(storageRef, blob);
+                
+                console.log('🔗 Lấy download URL...');
                 const downloadUrl = await getDownloadURL(storageRef);
                 value.image = downloadUrl;
+                console.log('✅ Upload thành công:', downloadUrl);
             }
 
-            value.userName = user.fullName;
-            value.userEmail = user.primaryEmailAddress?.emailAddress;
-            value.userImage = user.imageUrl;
+            value.userName = user?.fullName || 'Anonymous';
+            value.userEmail = user?.primaryEmailAddress?.emailAddress || '';
+            value.userImage = user?.imageUrl || '';
+            value.createdAt = new Date().toISOString();
 
-            const docRef = await addDoc(collection(db, "cars"), value);
+            console.log('💾 Lưu vào Firestore...');
+            const docRef = await addDoc(collection(db, "products"), value);
+            
             if (docRef.id) {
-                Alert.alert("Đăng thành công!", "Bài đăng của bạn đã được thêm vào.");
+                console.log('✅ Tạo bài đăng thành công:', docRef.id);
+                Alert.alert(
+                    "Đăng thành công!", 
+                    "Bài đăng của bạn đã được thêm vào.",
+                    [
+                        { 
+                            text: "OK", 
+                            onPress: () => {
+                                setImage(null);
+                            }
+                        }
+                    ]
+                );
             }
-        } catch (error) {
-            console.error("Error adding post: ", error);
+        } catch (error: any) {
+            console.error("❌ Error adding post: ", error);
+            console.error("Error code:", error?.code);
+            console.error("Error message:", error?.message);
+            
+            let errorMessage = 'Không thể đăng bài. Vui lòng thử lại.';
+            
+            if (error?.code === 'storage/unauthorized') {
+                errorMessage = 'Lỗi: Không có quyền upload ảnh.\n\nVui lòng kiểm tra Firebase Storage Rules.';
+            } else if (error?.code === 'storage/unknown') {
+                errorMessage = 'Lỗi: Không thể kết nối Firebase Storage.\n\nKiểm tra:\n- Firebase config\n- Storage Rules\n- Kết nối Internet';
+            } else if (error?.message) {
+                errorMessage = `Lỗi: ${error.message}`;
+            }
+            
+            Alert.alert("Lỗi đăng bài", errorMessage);
         } finally {
             setLoading(false);
         }

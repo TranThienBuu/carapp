@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Firestore Security Rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Rule cho collection products (bài đăng sản phẩm)
+    match /products/{productId} {
+      allow read: if true;  // Ai cũng đọc được
+      allow create: if request.auth != null;  // Phải đăng nhập mới tạo được
+      allow update, delete: if request.auth != null 
+                            && request.auth.token.email == resource.data.userEmail;  // Chỉ chủ bài mới sửa/xóa được
+    }
+    
+    // Rule cho collection orders (đơn hàng)
+    match /orders/{orderId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+    
+    // Rule cho collection Category
+    match /Category/{categoryId} {
+      allow read: if true;  // Ai cũng đọc được
+      allow write: if false;  // Chỉ admin mới được thêm/sửa/xóa (qua Firebase Console)
+    }
+    
+    // Rule cho collection cars (legacy - nếu còn dùng)
+    match /cars/{carId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null 
+                            && request.auth.token.email == resource.data.userEmail;
+    }
+    
+    // Default: deny tất cả
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

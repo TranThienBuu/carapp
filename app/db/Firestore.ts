@@ -1,6 +1,7 @@
 import * as firebase from 'firebase/app';
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 //cái này dùng để connect với firebase (carapp-dev)
 const firebaseConfig = {
@@ -15,8 +16,9 @@ const app =  firebase.initializeApp(firebaseConfig);
 
 const firestore = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
-export { app, firestore, storage };
+export { app, firestore, storage, auth };
 
 //firebase đây nhé
 //chổ này dùng để connect tới thằng firebase

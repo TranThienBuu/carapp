@@ -15,12 +15,29 @@ export default function HomeScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredItems, setFilteredItems] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        getSliders();
-        getCategoryList();
-        getLatestItemList();
+        loadData();
     }, []);
+    
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            await Promise.all([
+                getSliders(),
+                getCategoryList(),
+                getLatestItemList()
+            ]);
+        } catch (err) {
+            console.error('Lỗi tải dữ liệu:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Reload data when screen is focused (khi chuyển tab về)
     useEffect(() => {
@@ -88,14 +105,28 @@ export default function HomeScreen() {
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        getSliders().then(() => {
-            getCategoryList().then(() => {
-                getLatestItemList().then(() => {
-                    setRefreshing(false);
-                });
-            });
-        });
+        loadData().finally(() => setRefreshing(false));
     }, []);
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#006266" />
+                <Text style={{ marginTop: 10 }}>Đang tải dữ liệu...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: 'red', marginBottom: 10 }}>Lỗi: {error}</Text>
+                <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20 }}>
+                    Vui lòng kiểm tra kết nối internet và Firebase
+                </Text>
+            </View>
+        );
+    }
 
     return (
         <ScrollView

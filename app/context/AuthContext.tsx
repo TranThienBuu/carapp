@@ -1,13 +1,14 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Configuration: Set to true to enable Google OAuth (requires valid Client IDs)
 const ENABLE_GOOGLE_AUTH = true;
 
+// ====== TYPES ======
 interface User {
   id: string;
   fullName: string | null;
@@ -25,6 +26,7 @@ interface AuthContextType {
   isGoogleAuthEnabled: boolean;
 }
 
+// ====== CONTEXT ======
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoaded: false,
@@ -40,69 +42,84 @@ export const useUser = () => {
   return { user, isLoaded };
 };
 
+// ====== PROVIDER ======
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Google OAuth Client IDs
-  const googleAuthConfig = {
-    iosClientId: ENABLE_GOOGLE_AUTH ? '465301224798-glkisoveo058sus5jo59ivst675133vv.apps.googleusercontent.com' : 'dummy-ios-client-id',
-    androidClientId: ENABLE_GOOGLE_AUTH ? '465301224798-glkisoveo058sus5jo59ivst675133vv.apps.googleusercontent.com' : 'dummy-android-client-id',
-    webClientId: ENABLE_GOOGLE_AUTH ? '465301224798-glkisoveo058sus5jo59ivst675133vv.apps.googleusercontent.com' : 'dummy-web-client-id',
-    expoClientId: ENABLE_GOOGLE_AUTH ? '465301224798-glkisoveo058sus5jo59ivst675133vv.apps.googleusercontent.com' : 'dummy-expo-client-id',
-    // Luôn hiện màn hình chọn tài khoản Google
-    selectAccount: true,
-    // Don't use redirectUri - let Expo auto-generate the correct one
-  };
+  // ===== Redirect URI =====
+  // Sửa đoạn này trong AuthContext.tsx
+  const redirectUri = AuthSession.makeRedirectUri({
+    // Thay vì dùng scheme: 'carapp', hãy để Expo tự xử lý proxy khi dev
+    useProxy: true,
+  });
+  console.log('🔥 redirectUri =', redirectUri);
+
+  // ===== GOOGLE CONFIG =====
+const googleAuthConfig = {
+  // QUAN TRỌNG: Khi dùng Expo Go, bạn nên dùng Web Client ID
+  clientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
+  androidClientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
+  iosClientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
+  redirectUri,
+};
+
+  console.log('🧩 googleAuthConfig =', googleAuthConfig);
 
   const [request, response, promptAsync] = Google.useAuthRequest(googleAuthConfig);
 
-  // Load user from AsyncStorage on mount
+  useEffect(() => {
+    console.log('🧩 Auth request object =', request);
+  }, [request]);
+
+  // ===== LOAD USER =====
   useEffect(() => {
     loadUser();
-    
-    // Set up interval to check for user changes (for demo login)
-    const interval = setInterval(() => {
-      loadUser();
-    }, 1000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const loadUser = async () => {
     try {
       const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        if (JSON.stringify(parsedUser) !== JSON.stringify(user)) {
-          setUser(parsedUser);
-        }
-      }
+      if (storedUser) setUser(JSON.parse(storedUser));
     } catch (error) {
       console.error('Error loading user:', error);
     } finally {
-      if (!isLoaded) {
-        setIsLoaded(true);
-      }
+      setIsLoaded(true);
     }
   };
 
+  // ===== HANDLE AUTH RESPONSE =====
   useEffect(() => {
-    if (response?.type === 'success') {
+    if (!response) return;
+
+    console.log('📥 Auth response =', response);
+
+    if (response.type === 'success') {
       const { authentication } = response;
+      console.log('✅ authentication =', authentication);
+
       if (authentication?.accessToken) {
         getUserInfo(authentication.accessToken);
       }
     }
+
+    if (response.type === 'error') {
+      console.error('❌ Google Auth Error:', response.error);
+    }
   }, [response]);
 
+  // ===== FETCH GOOGLE PROFILE =====
   const getUserInfo = async (token: string) => {
     try {
-      const response = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+      console.log('🔑 Access token =', token);
+
+      const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const userInfo = await response.json();
-      
+
+      const userInfo = await res.json();
+      console.log('👤 Google userInfo =', userInfo);
+
       const newUser: User = {
         id: userInfo.id,
         fullName: userInfo.name,
@@ -110,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         primaryEmailAddress: { emailAddress: userInfo.email },
         email: userInfo.email,
       };
-      
+
       setUser(newUser);
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
     } catch (error) {
@@ -118,57 +135,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ===== SIGN IN =====
   const signInWithGoogle = async () => {
-    if (!ENABLE_GOOGLE_AUTH) {
-      throw new Error('Google Authentication is disabled. Please use Demo Mode.');
-    }
+    if (!ENABLE_GOOGLE_AUTH) throw new Error('Google Authentication is disabled.');
+
     try {
+      console.log('🚀 Start Google login...');
+      console.log('📦 Request details:', request);
       const result = await promptAsync();
-      if (result.type === 'error') {
-        console.error('Google Sign-In Error:', result.error);
-        throw new Error('Failed to authenticate with Google. Please check OAuth configuration.');
-      }
+      console.log('🟢 promptAsync result =', result);
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       throw error;
     }
   };
 
+  // ===== DEMO LOGIN =====
   const signInDemo = async () => {
-    try {
-      const demoUser: User = {
-        id: 'demo-user-' + Date.now(),
-        fullName: 'Demo User',
-        imageUrl: 'https://ui-avatars.com/api/?name=Demo+User&background=4ade80&color=fff&size=200',
-        primaryEmailAddress: { emailAddress: 'demo@plantu.app' },
-        email: 'demo@plantu.app',
-      };
-      setUser(demoUser);
-      await AsyncStorage.setItem('user', JSON.stringify(demoUser));
-    } catch (error) {
-      console.error('Demo Sign-In Error:', error);
-      throw error;
-    }
+    const demoUser: User = {
+      id: 'demo-user-' + Date.now(),
+      fullName: 'Demo User',
+      imageUrl:
+        'https://ui-avatars.com/api/?name=Demo+User&background=4ade80&color=fff&size=200',
+      primaryEmailAddress: { emailAddress: 'demo@plantu.app' },
+      email: 'demo@plantu.app',
+    };
+
+    setUser(demoUser);
+    await AsyncStorage.setItem('user', JSON.stringify(demoUser));
   };
 
+  // ===== SIGN OUT =====
   const signOut = async () => {
-    try {
-      setUser(null);
-      await AsyncStorage.removeItem('user');
-    } catch (error) {
-      console.error('Sign Out Error:', error);
-    }
+    setUser(null);
+    await AsyncStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoaded, 
-      signOut, 
-      signInWithGoogle, 
-      signInDemo,
-      isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoaded,
+        signOut,
+        signInWithGoogle,
+        signInDemo,
+        isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
