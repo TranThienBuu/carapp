@@ -3,7 +3,7 @@
     "strict": false,
     "jsx": "react-native",
     "target": "esnext",
-    "module": "commonjs",
+    "module": "esnext",
     "lib": [
       "esnext"
     ],

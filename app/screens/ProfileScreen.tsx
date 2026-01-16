@@ -14,9 +14,9 @@ export default function ProfileScreen() {
     const{isLoaded, signOut} =useAuth();
 
     const onMenuPress=(item)=>{
-        if(item.name=="Logout")
+        if(item.name=="Đăng xuất")
         {
-signOut();
+            signOut();
         }
         item?.path?navigation.navigate(item.path):null
     }
