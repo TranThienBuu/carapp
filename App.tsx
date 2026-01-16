@@ -36,8 +36,10 @@ function AppContent() {
 
 export default function App() {
     return (
-        <AuthProvider>
-            <AppContent />
-        </AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <AuthProvider>
+                <AppContent />
+            </AuthProvider>
+        </GestureHandlerRootView>
     );
 }

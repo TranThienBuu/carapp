@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Firebase Storage Rules cho ứng dụng CarApp
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Rule cho folder communityPost (bài đăng)
+    match /communityPost/{imageId} {
+      // Cho phép đọc tất cả
+      allow read: if true;
+      
+      // Cho phép upload nếu đã đăng nhập
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024  // Max 10MB
+                   && request.resource.contentType.matches('image/.*');  // Chỉ cho phép ảnh
+    }
+    
+    // Rule cho folder products (nếu cần)
+    match /products/{imageId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Default: deny tất cả
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -21,6 +21,33 @@ export interface User {
     createdAt: Date;
 }
 
+export interface CartItem {
+    id: string;
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+    description: string;
+}
+
+export interface Order {
+    id: string;
+    orderId: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    phone: string;
+    address: string;
+    items: CartItem[];
+    subtotal: number;
+    shippingFee: number;
+    total: number;
+    paymentMethod: 'COD' | 'VNPay';
+    status: 'pending' | 'paid' | 'processing' | 'shipping' | 'completed' | 'cancelled';
+    createdAt: Date;
+}
+
 // Mock data
 let mockProducts: Product[] = [
     {
@@ -76,6 +103,56 @@ let mockUsers: User[] = [
         email: 'mike@example.com',
         role: 'user',
         createdAt: new Date('2024-01-12'),
+    },
+];
+
+let mockCartItems: CartItem[] = [
+    {
+        id: '1',
+        productId: '1',
+        name: 'Toyota Camry 2020',
+        price: 25000,
+        quantity: 1,
+        image: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400',
+        description: 'Well maintained sedan, low mileage',
+    },
+    {
+        id: '2',
+        productId: '2',
+        name: 'Honda CR-V 2021',
+        price: 32000,
+        quantity: 2,
+        image: 'https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=400',
+        description: 'Family SUV, excellent condition',
+    },
+];
+
+let mockOrders: Order[] = [
+    {
+        id: '1',
+        orderId: 'DH1704960000000',
+        userId: '1',
+        userName: 'John Doe',
+        userEmail: 'john@example.com',
+        phone: '0123456789',
+        address: '123 Main St, City',
+        items: [
+            {
+                id: '1',
+                productId: '1',
+                name: 'Toyota Camry 2020',
+                price: 25000,
+                quantity: 1,
+                image: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400',
+                description: 'Well maintained sedan, low mileage',
+            },
+        ],
+        subtotal: 25000,
+        shippingFee: 500,
+        total: 25500,
+        paymentMethod: 'COD',
+        status: 'pending',
+        createdAt: new Date('2024-01-18'),
     },
 ];
 
@@ -187,6 +264,74 @@ class MockDataService {
             adminUsers: mockUsers.filter(u => u.role === 'admin').length,
             regularUsers: mockUsers.filter(u => u.role === 'user').length,
         };
+    }
+
+    // ============ CART METHODS ============
+    
+    async getCartItems(): Promise<CartItem[]> {
+        await this.delay(300);
+        return [...mockCartItems];
+    }
+
+    async addToCart(item: Omit<CartItem, 'id'>): Promise<CartItem> {
+        await this.delay(300);
+        const newItem: CartItem = {
+            ...item,
+            id: Date.now().toString(),
+        };
+        mockCartItems.push(newItem);
+        return newItem;
+    }
+
+    async updateCartItemQuantity(id: string, quantity: number): Promise<CartItem> {
+        await this.delay(200);
+        const index = mockCartItems.findIndex(item => item.id === id);
+        if (index === -1) throw new Error('Cart item not found');
+        
+        mockCartItems[index].quantity = quantity;
+        return mockCartItems[index];
+    }
+
+    async deleteCartItem(id: string): Promise<void> {
+        await this.delay(300);
+        mockCartItems = mockCartItems.filter(item => item.id !== id);
+    }
+
+    async clearCart(): Promise<void> {
+        await this.delay(300);
+        mockCartItems = [];
+    }
+
+    // ============ ORDER METHODS ============
+    
+    async getOrders(): Promise<Order[]> {
+        await this.delay(500);
+        return [...mockOrders];
+    }
+
+    async getOrderById(id: string): Promise<Order | null> {
+        await this.delay(300);
+        return mockOrders.find(o => o.id === id) || null;
+    }
+
+    async createOrder(order: Omit<Order, 'id' | 'createdAt'>): Promise<Order> {
+        await this.delay(500);
+        const newOrder: Order = {
+            ...order,
+            id: Date.now().toString(),
+            createdAt: new Date(),
+        };
+        mockOrders.push(newOrder);
+        return newOrder;
+    }
+
+    async updateOrderStatus(id: string, status: Order['status']): Promise<Order> {
+        await this.delay(300);
+        const index = mockOrders.findIndex(o => o.id === id);
+        if (index === -1) throw new Error('Order not found');
+        
+        mockOrders[index].status = status;
+        return mockOrders[index];
     }
 
     // Helper method to simulate API delay

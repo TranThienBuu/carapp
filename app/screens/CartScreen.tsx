@@ -1,305 +1,360 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Button, Modal, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { getFirestore, doc, getDoc, collection, updateDoc, addDoc } from 'firebase/firestore';
-import { app } from '../../firebase.config';
-import { ListItem, Icon } from 'react-native-elements';
+import { View, Text, FlatList, TouchableOpacity, Alert, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { mockDataService, CartItem } from '../services/MockDataService';
 
-const CartScreen = ({ navigation }) => {
-    const db = getFirestore(app);
-    const [cartItems, setCartItems] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [userName, setUserName] = useState('');
-    const [address, setAddress] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('Cash'); // Default payment method is Cash
-    const [editingItem, setEditingItem] = useState(null); // To store the item being edited
+const CartScreen = () => {
+    const navigation = useNavigation<any>();
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
+    // Load cart items khi component mount
     useEffect(() => {
-        const fetchCartItems = async () => {
-            try {
-                const cartDocRef = doc(db, 'carts', 'userCart');
-                const cartDocSnapshot = await getDoc(cartDocRef);
-
-                if (cartDocSnapshot.exists()) {
-                    const cartData = cartDocSnapshot.data();
-                    const { products, quantities } = cartData;
-
-                    const items = await Promise.all(products.map(async (product, index) => {
-                        const plantDocRef = doc(db, 'plants', product);
-                        const plantDocSnapshot = await getDoc(plantDocRef);
-
-                        if (plantDocSnapshot.exists()) {
-                            const plantData = plantDocSnapshot.data();
-                            return {
-                                name: product,
-                                quantity: quantities[index],
-                                price: plantData.price,
-                                description: plantData.description,
-                                image: plantData.image,
-                            };
-                        } else {
-                            return {
-                                name: product,
-                                quantity: quantities[index],
-                                price: 0,
-                                description: 'No description available',
-                                image: '',
-                            };
-                        }
-                    }));
-
-                    setCartItems(items);
-                } else {
-                    console.log('Document does not exist!');
-                }
-            } catch (error) {
-                console.error('Error fetching cart items:', error);
-            }
-        };
-
-        fetchCartItems();
+        loadCartItems();
     }, []);
 
-    const renderItem = ({ item, index }) => (
-        <ListItem bottomDivider>
-            <ListItem.Content style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                    <ListItem.Title>{item.name}</ListItem.Title>
-                    <ListItem.Subtitle>Quantity: {item.quantity}</ListItem.Subtitle>
-                    <ListItem.Subtitle>Price: ${item.price}</ListItem.Subtitle>
-                    {/* Display other product details */}
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TouchableOpacity onPress={() => handleEditQuantity(item)}>
-                        <Icon name="edit" type="material" size={24} color="blue" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteItem(item)}>
-                        <Icon name="delete" type="material" size={24} color="red" />
-                    </TouchableOpacity>
-                </View>
-            </ListItem.Content>
-        </ListItem>
-    );
-
-    const handleEditQuantity = (item) => {
-        setEditingItem(item); // Store the item being edited
-        setModalVisible(true); // Show the edit quantity modal
-    };
-
-    const handleDeleteItem = async (item) => {
+    const loadCartItems = async () => {
+        setLoading(true);
         try {
-            const updatedProducts = cartItems.filter(i => i.name !== item.name).map(i => i.name);
-            const updatedQuantities = cartItems.filter(i => i.name !== item.name).map(i => i.quantity);
-
-            const cartRef = doc(db, 'carts', 'userCart');
-            await updateDoc(cartRef, { products: updatedProducts, quantities: updatedQuantities });
-
-            setCartItems(cartItems.filter(i => i.name !== item.name));
-            Alert.alert('Success', 'Item deleted successfully!');
+            const items = await mockDataService.getCartItems();
+            setCartItems(items);
         } catch (error) {
-            console.error('Error deleting item:', error);
-            Alert.alert('Error', 'Failed to delete item. Please try again.');
+            console.error('Error loading cart:', error);
+            Alert.alert('Lỗi', 'Không thể tải giỏ hàng');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
     };
 
-    const handleCloseModal = () => {
-        setEditingItem(null); // Reset the editing item
-        setModalVisible(false);
+    const handleRefresh = () => {
+        setRefreshing(true);
+        loadCartItems();
     };
 
-    const handleSaveEdit = async () => {
+    const handleIncrease = async (itemId: string) => {
         try {
-            const { name, quantity } = editingItem;
-            const updatedQuantities = cartItems.map(item => item.name === name ? { ...item, quantity } : item).map(i => i.quantity);
-
-            const cartRef = doc(db, 'carts', 'userCart');
-            await updateDoc(cartRef, { quantities: updatedQuantities });
-
-            setCartItems(cartItems.map(item => item.name === name ? { ...item, quantity } : item));
-            handleCloseModal();
-            Alert.alert('Success', 'Quantity updated successfully!');
+            const item = cartItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            await mockDataService.updateCartItemQuantity(itemId, item.quantity + 1);
+            setCartItems(prevItems =>
+                prevItems.map(item =>
+                    item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+                )
+            );
         } catch (error) {
-            console.error('Error updating quantity:', error);
-            Alert.alert('Error', 'Failed to update quantity. Please try again.');
+            console.error('Error increasing quantity:', error);
+            Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
         }
+    };
+
+    const handleDecrease = async (itemId: string) => {
+        try {
+            const item = cartItems.find(i => i.id === itemId);
+            if (!item || item.quantity <= 1) return;
+            
+            await mockDataService.updateCartItemQuantity(itemId, item.quantity - 1);
+            setCartItems(prevItems =>
+                prevItems.map(item =>
+                    item.id === itemId && item.quantity > 1
+                        ? { ...item, quantity: item.quantity - 1 }
+                        : item
+                )
+            );
+        } catch (error) {
+            console.error('Error decreasing quantity:', error);
+            Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
+        }
+    };
+
+    const handleDeleteItem = (itemId: string) => {
+        Alert.alert(
+            'Xóa sản phẩm',
+            'Bạn có chắc muốn xóa sản phẩm này?',
+            [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                    text: 'Xóa',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await mockDataService.deleteCartItem(itemId);
+                            setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+                            Alert.alert('Thành công', 'Đã xóa sản phẩm khỏi giỏ hàng');
+                        } catch (error) {
+                            console.error('Error deleting item:', error);
+                            Alert.alert('Lỗi', 'Không thể xóa sản phẩm');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const calculateSubtotal = () => {
+        return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
     };
 
     const handleProceedToCheckout = () => {
-        setModalVisible(true);
-    };
-
-    const handleCheckout = async () => {
-        try {
-            if (!userName || !address || !paymentMethod) {
-                Alert.alert('Error', 'Please fill in all fields.');
-                return;
-            }
-
-            // Save the order to Firestore
-            const ordersRef = collection(db, 'orders');
-            await addDoc(ordersRef, {
-                userName,
-                address,
-                paymentMethod,
-                items: cartItems.map(item => ({
-                    plantId: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
-                    description: item.description,
-                    image: item.image,
-                })),
-                total: calculateTotal(),
-                timestamp: new Date(),
-            });
-
-            // Update the cart in Firestore
-            const cartRef = doc(db, 'carts', 'userCart');
-            await updateDoc(cartRef, { products: [], quantities: [] });
-
-            // Close the modal and show success message
-            handleCloseModal();
-            setCartItems([]); // Clear the cart items after placing the order
-            Alert.alert('Success', 'Order placed successfully!');
-        } catch (error) {
-            console.error('Error during checkout:', error);
-            Alert.alert('Error', 'There was an error during checkout. Please try again.');
+        if (cartItems.length === 0) {
+            Alert.alert('Giỏ hàng trống', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
+            return;
         }
+
+        const totalAmount = calculateSubtotal();
+        navigation.navigate('checkout', {
+            cartItems: cartItems,
+            totalAmount: totalAmount
+        });
     };
 
-    const calculateTotal = () => {
-        return cartItems
-            .reduce((total, item) => total + item.price * item.quantity, 0)
-            .toFixed(2);
-    };
+    const renderItem = ({ item }) => (
+        <View style={styles.cartItem}>
+            <Image source={{ uri: item.image }} style={styles.itemImage} />
+            <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemDescription} numberOfLines={2}>
+                    {item.description}
+                </Text>
+                <Text style={styles.itemPrice}>
+                    {item.price.toLocaleString('vi-VN')}đ
+                </Text>
+            </View>
+            <View style={styles.itemActions}>
+                <View style={styles.quantityControl}>
+                    <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={() => handleDecrease(item.id)}
+                    >
+                        <Ionicons name="remove" size={20} color="#006266" />
+                    </TouchableOpacity>
+                    <Text style={styles.quantityText}>{item.quantity}</Text>
+                    <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={() => handleIncrease(item.id)}
+                    >
+                        <Ionicons name="add" size={20} color="#006266" />
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteItem(item.id)}
+                >
+                    <Ionicons name="trash-outline" size={24} color="#ff4444" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    if (loading && cartItems.length === 0) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#006266" />
+                <Text style={styles.loadingText}>Đang tải giỏ hàng...</Text>
+            </View>
+        );
+    }
+
+    if (cartItems.length === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Ionicons name="cart-outline" size={100} color="#ccc" />
+                <Text style={styles.emptyText}>Giỏ hàng trống</Text>
+                <Text style={styles.emptySubText}>
+                    Hãy thêm sản phẩm vào giỏ hàng để mua sắm
+                </Text>
+                <TouchableOpacity
+                    style={styles.shopNowButton}
+                    onPress={() => navigation.navigate('home')}
+                >
+                    <Text style={styles.shopNowText}>Mua sắm ngay</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Cart Items:</Text>
+        <View style={styles.container}>
             <FlatList
                 data={cartItems}
-                keyExtractor={(item, index) => index.toString()}
+                keyExtractor={(item) => item.id}
                 renderItem={renderItem}
-                style={{ width: '100%' }}
-            />
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginTop: 20 }}>Total: ${calculateTotal()}</Text>
-            <Button
-                title="Proceed to Checkout"
-                containerStyle={{ width: '100%', marginTop: 20 }}
-                onPress={handleProceedToCheckout}
+                contentContainerStyle={styles.listContainer}
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
             />
 
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={handleCloseModal}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalView}>
-                        {editingItem ? (
-                            <>
-                                <Text style={styles.modalTitle}>Edit Quantity</Text>
-                                <Text style={styles.modalText}>{editingItem.name}</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Quantity"
-                                    value={editingItem.quantity.toString()}
-                                    onChangeText={(text) => setEditingItem({ ...editingItem, quantity: parseInt(text, 10) })}
-                                    keyboardType="numeric"
-                                />
-                                <TouchableOpacity style={styles.button} onPress={handleSaveEdit}>
-                                    <Text style={styles.buttonText}>Save</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCloseModal}>
-                                    <Text style={styles.buttonText}>Cancel</Text>
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <>
-                                <Text style={styles.modalTitle}>Checkout</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Recipient Name"
-                                    value={userName}
-                                    onChangeText={setUserName}
-                                />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Address"
-                                    value={address}
-                                    onChangeText={setAddress}
-                                />
-                                <Text>Payment method: {paymentMethod}</Text>
-                                <TouchableOpacity style={styles.button} onPress={handleCheckout}>
-                                    <Text style={styles.buttonText}>Place Order</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCloseModal}>
-                                    <Text style={styles.buttonText}>Cancel</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
+            <View style={styles.summaryContainer}>
+                <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Tạm tính:</Text>
+                    <Text style={styles.summaryValue}>
+                        {calculateSubtotal().toLocaleString('vi-VN')}đ
+                    </Text>
                 </View>
-            </Modal>
+
+                <TouchableOpacity
+                    style={styles.checkoutButton}
+                    onPress={handleProceedToCheckout}
+                >
+                    <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    modalContainer: {
+    container: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: '#f5f5f5',
     },
-    modalView: {
-        width: '80%',
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        alignItems: 'center',
+    listContainer: {
+        padding: 16,
+    },
+    cartItem: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    itemImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+    },
+    itemInfo: {
+        flex: 1,
+        marginLeft: 12,
+        justifyContent: 'center',
+    },
+    itemName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    itemDescription: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 8,
+    },
+    itemPrice: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#006266',
+    },
+    itemActions: {
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    quantityControl: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        padding: 4,
+    },
+    quantityButton: {
+        padding: 4,
+    },
+    quantityText: {
+        paddingHorizontal: 12,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    deleteButton: {
+        padding: 8,
+        marginTop: 8,
+    },
+    summaryContainer: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 5,
     },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
     },
-    modalText: {
+    summaryLabel: {
+        fontSize: 16,
+        color: '#666',
+    },
+    summaryValue: {
         fontSize: 18,
-        marginBottom: 10,
+        fontWeight: 'bold',
+        color: '#006266',
     },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 10,
-        width: '100%',
+    checkoutButton: {
+        backgroundColor: '#006266',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderRadius: 12,
+        gap: 8,
     },
-    button: {
-        backgroundColor: '#008000',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-        marginTop: 20,
-        width: '100%',
-    },
-    cancelButton: {
-        backgroundColor: '#FF0000',
-        marginTop: 10,
-    },
-    buttonText: {
+    checkoutButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        padding: 20,
+    },
+    emptyText: {
+        fontSize: 18,
+        color: '#999',
+        marginTop: 16,
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#ccc',
+        marginTop: 8,
+        marginBottom: 24,
         textAlign: 'center',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#666',
+    },
+    shopNowButton: {
+        backgroundColor: '#006266',
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    shopNowText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 
