@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View, Text, ScrollView, RefreshControl } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import Header from "../components/Header";
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import { app } from "../../firebase.config";
+import { mockDataService } from "../services/MockDataService";
 import Slider from "../components/Slider";
 import Category from "../components/Category";
 import LatestItemList from "../components/LatestItemList";
 
 export default function HomeScreen() {
-    const db = getFirestore(app);
+    const isFocused = useIsFocused();
     const [sliderList, setSliderList] = useState([]);
     const [categoryList, setCategoryList] = useState([]);
     const [latestItemList, setLatestItemList] = useState([]);
@@ -21,6 +21,13 @@ export default function HomeScreen() {
         getCategoryList();
         getLatestItemList();
     }, []);
+
+    // Reload data when screen is focused (khi chuyển tab về)
+    useEffect(() => {
+        if (isFocused) {
+            getLatestItemList();
+        }
+    }, [isFocused]);
 
     useEffect(() => {
         if (searchQuery === "") {
@@ -35,28 +42,44 @@ export default function HomeScreen() {
 
     const getSliders = async () => {
         setSliderList([]);
-        const querySnapshot = await getDocs(collection(db, "Sliders"));
-        querySnapshot.forEach((doc) => {
-            setSliderList(sliderList => [...sliderList, doc.data()]);
-        });
+        // Mock sliders data - bạn có thể custom lại
+        const mockSliders = [
+            { name: 'Slider 1', image: 'https://via.placeholder.com/400x200' },
+            { name: 'Slider 2', image: 'https://via.placeholder.com/400x200' },
+        ];
+        setSliderList(mockSliders);
     };
 
     const getCategoryList = async () => {
-        setCategoryList([]);
-        const querySnapshot = await getDocs(collection(db, "Category"));
-        querySnapshot.forEach((doc) => {
-            console.log(doc.data());
-            setCategoryList(categoryList => [...categoryList, doc.data()]);
-        });
+        // Mock categories data - bạn có thể custom lại
+        const mockCategories = [
+            { name: 'Sedan', icon: '🚗', id: '1' },
+            { name: 'SUV', icon: '🚙', id: '2' },
+            { name: 'Luxury', icon: '🚘', id: '3' },
+        ];
+        setCategoryList(mockCategories);
     };
 
     const getLatestItemList = async () => {
-        setLatestItemList([]);
-        const querySnapshot = await getDocs(collection(db, "cars"));
-        querySnapshot.forEach((doc) => {
-            console.log(doc.data());
-            setLatestItemList(latestItemList => [...latestItemList, doc.data()]);
-        });
+        try {
+            const products = await mockDataService.getProducts();
+            // Convert sang format mà LatestItemList component mong đợi
+            const formattedProducts = products
+                .filter(p => p.status === 'active') // Chỉ lấy sản phẩm active
+                .map(product => ({
+                    id: product.id,
+                    title: product.name,
+                    category: product.category,
+                    price: product.price,
+                    desc: product.description,
+                    image: product.image || 'https://via.placeholder.com/400x200?text=No+Image',
+                    status: product.status,
+                    createdAt: product.createdAt,
+                }));
+            setLatestItemList(formattedProducts);
+        } catch (error) {
+            console.error('Error loading products:', error);
+        }
     };
 
     const handleSearch = (query) => {

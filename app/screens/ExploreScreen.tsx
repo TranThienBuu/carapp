@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { ScrollView, Text, View, RefreshControl } from "react-native";
-import { collection, getDocs, getFirestore, orderBy, query } from "firebase/firestore";
-import { app } from "../../firebase.config";
+import { useIsFocused } from '@react-navigation/native';
+import { mockDataService } from "../services/MockDataService";
 import LatestItemList from "../components/LatestItemList";
 
 export default function ExploreScreen() {
-    const db = getFirestore(app);
+    const isFocused = useIsFocused();
     const [productList, setProductList] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -13,13 +13,31 @@ export default function ExploreScreen() {
         getAllProducts();
     }, []);
 
+    // Reload data when screen is focused (khi chuyển tab về)
+    useEffect(() => {
+        if (isFocused) {
+            getAllProducts();
+        }
+    }, [isFocused]);
+
     const getAllProducts = async () => {
-        setProductList([]);
-        const q = query(collection(db, "cars"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        snapshot.forEach((doc) => {
-            setProductList(productList => [...productList, doc.data()]);
-        });
+        try {
+            const products = await mockDataService.getProducts();
+            // Convert sang format mà LatestItemList component mong đợi
+            const formattedProducts = products.map(product => ({
+                id: product.id,
+                title: product.name,
+                category: product.category,
+                price: product.price,
+                desc: product.description,
+                image: product.image || 'https://via.placeholder.com/400x200?text=No+Image',
+                status: product.status,
+                createdAt: product.createdAt,
+            }));
+            setProductList(formattedProducts);
+        } catch (error) {
+            console.error('Error loading products:', error);
+        }
     };
 
     const onRefresh = useCallback(() => {

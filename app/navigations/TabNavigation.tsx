@@ -3,7 +3,7 @@ import {View, Text} from "react-native";
 import {createBottomTabNavigator} from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/HomeScreen";
 import ExploreScreen from "../screens/ExploreScreen";
-import AddPostScreen from "../screens/AddPostScreen";
+import AdminScreen from "../screens/AdminScreen";
 import { Ionicons } from '@expo/vector-icons';
 import ProfileScreen from "../screens/ProfileScreen";
 import HomeScreenStackNavigation from "./HomeScreenStackNavigation";
@@ -31,16 +31,16 @@ const TabNavigation = () => {
                             tabBarLabel:({color})=>(
                                 <Text style={{color:color, fontSize: 16, marginBottom:3}}>Explore</Text>
                             ), tabBarIcon:({color, size})=>(
-                                <Ionicons name="home" size={size} color={color} />
+                                <Ionicons name="search" size={size} color={color} />
                             )
                         }}
             />
-            <Tab.Screen name="addPost" component={AddPostScreen}
+            <Tab.Screen name="admin" component={AdminScreen}
                         options={{
                             tabBarLabel:({color})=>(
-                                <Text style={{color:color, fontSize: 16, marginBottom:3}}>Add Post</Text>
+                                <Text style={{color:color, fontSize: 16, marginBottom:3}}>Admin</Text>
                             ), tabBarIcon:({color, size})=>(
-                                <Ionicons name="home" size={size} color={color} />
+                                <Ionicons name="shield-checkmark" size={size} color={color} />
                             )
                         }}
             />
@@ -49,7 +49,7 @@ const TabNavigation = () => {
                             tabBarLabel:({color})=>(
                                 <Text style={{color:color, fontSize: 16, marginBottom:3}}>Profile</Text>
                             ), tabBarIcon:({color, size})=>(
-                                <Ionicons name="home" size={size} color={color} />
+                                <Ionicons name="person" size={size} color={color} />
                             )
                         }}
             />
