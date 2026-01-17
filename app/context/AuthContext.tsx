@@ -49,18 +49,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // ===== Redirect URI =====
   // Sửa đoạn này trong AuthContext.tsx
-  const redirectUri = AuthSession.makeRedirectUri({
-    // Thay vì dùng scheme: 'carapp', hãy để Expo tự xử lý proxy khi dev
-    useProxy: true,
-  });
+  // Ép redirectUri về dạng https://auth.expo.io/@phongpham2410/carapp
+  const redirectUri = `https://auth.expo.io/@phongpham2410/carapp`;
   console.log('🔥 redirectUri =', redirectUri);
 
   // ===== GOOGLE CONFIG =====
 const googleAuthConfig = {
-  // QUAN TRỌNG: Khi dùng Expo Go, bạn nên dùng Web Client ID
-  clientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
-  androidClientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
-  iosClientId: '465301224798-fdnf9d34b1jg842uhafl1l3ngfcbs00s.apps.googleusercontent.com',
+  clientId: '465301224798-glkisoveo058sus5jo59ivst675133vv.apps.googleusercontent.com', // Web Client ID bạn cung cấp
   redirectUri,
 };
 
@@ -91,7 +86,6 @@ const googleAuthConfig = {
   // ===== HANDLE AUTH RESPONSE =====
   useEffect(() => {
     if (!response) return;
-
     console.log('📥 Auth response =', response);
 
     if (response.type === 'success') {
@@ -100,11 +94,13 @@ const googleAuthConfig = {
 
       if (authentication?.accessToken) {
         getUserInfo(authentication.accessToken);
+      } else {
+        console.error('❌ No accessToken in authentication:', authentication);
       }
-    }
-
-    if (response.type === 'error') {
+    } else if (response.type === 'error') {
       console.error('❌ Google Auth Error:', response.error);
+    } else {
+      console.error('❌ Unknown response type:', response);
     }
   }, [response]);
 
