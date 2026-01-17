@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const ENABLE_GOOGLE_AUTH = true;
+const ENABLE_GOOGLE_AUTH = false; // Tạm tắt Google Auth
 
 // ====== TYPES ======
 interface User {
