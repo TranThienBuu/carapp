@@ -35,7 +35,7 @@ const OrdersScreen = ({ navigation }: any) => {
         setLoading(true);
         try {
             const data = await orderService.getUserOrders(user.id);
-            setOrders(data);
+            setOrders(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error loading orders:', error);
             Alert.alert('Lỗi', 'Không thể tải danh sách đơn hàng');
@@ -113,7 +113,7 @@ const OrdersScreen = ({ navigation }: any) => {
                     `Người nhận: ${item.userName}\n` +
                     `SĐT: ${item.phone}\n` +
                     `Địa chỉ: ${item.address}\n` +
-                    `Số sản phẩm: ${item.items.length}\n` +
+                    `Số sản phẩm: ${(item.items && Array.isArray(item.items)) ? item.items.length : 0}\n` +
                     `Tổng tiền: ${item.total.toLocaleString('vi-VN')}đ\n` +
                     `Phương thức: ${item.paymentMethod}\n` +
                     `Trạng thái: ${getStatusText(item.status)}`
@@ -148,7 +148,7 @@ const OrdersScreen = ({ navigation }: any) => {
             <View style={styles.orderFooter}>
                 <View style={styles.itemsInfo}>
                     <Text style={styles.itemsCount}>
-                        {item.items.length} sản phẩm
+                        {(item.items && Array.isArray(item.items)) ? item.items.length : 0} sản phẩm
                     </Text>
                     <Text style={styles.paymentMethod}>
                         {item.paymentMethod === 'COD' ? '💵 COD' : '💳 VNPay'}

@@ -18,6 +18,7 @@ class ProductService {
     async getProducts(): Promise<Product[]> {
         try {
             const idToken = await AsyncStorage.getItem('idToken');
+            console.log('🔑 getProducts - idToken:', idToken);
             const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products.json?auth=' + idToken);
             if (!res.ok) throw new Error('Permission denied');
             const data = await res.json();

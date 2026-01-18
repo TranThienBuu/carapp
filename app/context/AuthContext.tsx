@@ -149,6 +149,24 @@ const googleAuthConfig = {
       const userInfo = await res.json();
       console.log('👤 Google userInfo =', userInfo);
 
+      // Lấy idToken từ Google accessToken qua Firebase REST API
+      const firebaseApiKey = firebaseConfig.apiKey;
+      const firebaseRes = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${firebaseApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            postBody: `access_token=${token}&providerId=google.com`,
+            requestUri: 'http://localhost',
+            returnIdpCredential: true,
+            returnSecureToken: true,
+          }),
+        }
+      );
+      const firebaseData = await firebaseRes.json();
+      console.log('🔑 Firebase signInWithIdp response:', firebaseData);
+
       const newUser: User = {
         id: userInfo.id,
         fullName: userInfo.name,
@@ -161,9 +179,12 @@ const googleAuthConfig = {
       setUser(newUser);
       setIsAdmin(newUser.isAdmin);
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
-      // Lấy idToken từ Google accessToken (phải dùng endpoint exchange)
-      // TODO: Nếu dùng Google Auth, cần lấy idToken từ Firebase bằng accessToken
-      // await AsyncStorage.setItem('idToken', idToken);
+      if (firebaseData.idToken) {
+        console.log('✅ Google login - idToken:', firebaseData.idToken);
+        await AsyncStorage.setItem('idToken', firebaseData.idToken);
+      } else {
+        console.log('❌ Google login - idToken NOT FOUND:', firebaseData);
+      }
     } catch (error) {
       console.error('Error getting user info:', error);
     }

@@ -67,14 +67,33 @@ class OrderService {
     async getUserOrders(userId: string): Promise<Order[]> {
         try {
             const idToken = await AsyncStorage.getItem('idToken');
-            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?orderBy="userId"&equalTo="' + userId + '"&auth=' + idToken);
-            if (!res.ok) throw new Error('Permission denied');
-            const data = await res.json();
-            if (!data) return [];
-            const orders = Object.keys(data).map(key => ({
-                id: key,
-                ...data[key]
-            }));
+            const isAdminStr = await AsyncStorage.getItem('isAdmin');
+            const isAdmin = isAdminStr === 'true';
+            console.log('🔑 getUserOrders - idToken:', idToken, '| isAdmin:', isAdmin);
+            let orders: Order[] = [];
+            if (isAdmin) {
+                // Admin: lấy toàn bộ orders rồi lọc theo userId
+                const url = `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?auth=${idToken}`;
+                console.log('🔗 Admin fetching all orders URL:', url);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Permission denied');
+                const data = await res.json();
+                if (data) {
+                    orders = Object.keys(data)
+                        .map(key => ({ id: key, ...data[key] }))
+                        .filter(order => order.userId === userId);
+                }
+            } else {
+                // User thường: lấy từ userOrders/{userId}
+                const url = `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/userOrders/${userId}.json?auth=${idToken}`;
+                console.log('🔗 User fetching userOrders URL:', url);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Permission denied');
+                const data = await res.json();
+                if (data) {
+                    orders = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                }
+            }
             return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (error) {
             console.error('Error getting user orders:', error);
