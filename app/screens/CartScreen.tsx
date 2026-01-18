@@ -2,27 +2,59 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { mockDataService, CartItem } from '../services/MockDataService';
+import { cartService, CartItem } from '../services/CartService';
+import { useUser } from '../context/AuthContext';
 
 const CartScreen = () => {
     const navigation = useNavigation<any>();
+    const { user } = useUser();
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Load cart items khi component mount
     useEffect(() => {
-        loadCartItems();
-    }, []);
+        console.log('🔍 CartScreen - User object:', JSON.stringify(user, null, 2));
+        console.log('🔍 CartScreen - User ID:', user?.id);
+        
+        if (user?.id) {
+            console.log('✅ User ID tồn tại, đang load giỏ hàng...');
+            loadCartItems();
+            
+            // Lắng nghe thay đổi realtime của giỏ hàng
+            const unsubscribe = cartService.onCartChange(user.id, (items) => {
+                console.log('📦 Giỏ hàng realtime update:', items.length, 'items');
+                setCartItems(items);
+            });
+
+            return () => {
+                console.log('🧹 Cleanup: Unsubscribe cart listener');
+                if (unsubscribe) {
+                    unsubscribe();
+                }
+            };
+        } else {
+            console.log('❌ Không có User ID, không thể load giỏ hàng');
+            setCartItems([]);
+        }
+    }, [user]);
 
     const loadCartItems = async () => {
+        if (!user?.id) {
+            console.log('❌ loadCartItems: Không có user.id');
+            Alert.alert('Lỗi', 'Vui lòng đăng nhập để xem giỏ hàng');
+            return;
+        }
+        
+        console.log('📥 loadCartItems: Đang tải giỏ hàng cho user:', user.id);
         setLoading(true);
         try {
-            const items = await mockDataService.getCartItems();
+            const items = await cartService.getCartItems(user.id);
+            console.log('✅ loadCartItems: Đã lấy được', items.length, 'sản phẩm');
             setCartItems(items);
         } catch (error) {
-            console.error('Error loading cart:', error);
-            Alert.alert('Lỗi', 'Không thể tải giỏ hàng');
+            console.error('❌ Error loading cart:', error);
+            Alert.alert('Lỗi', 'Không thể tải giỏ hàng. Vui lòng kiểm tra Firebase Rules.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -35,16 +67,14 @@ const CartScreen = () => {
     };
 
     const handleIncrease = async (itemId: string) => {
+        if (!user?.id) return;
+        
         try {
             const item = cartItems.find(i => i.id === itemId);
             if (!item) return;
             
-            await mockDataService.updateCartItemQuantity(itemId, item.quantity + 1);
-            setCartItems(prevItems =>
-                prevItems.map(item =>
-                    item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
-                )
-            );
+            await cartService.updateCartItemQuantity(user.id, itemId, item.quantity + 1);
+            // State sẽ tự động cập nhật qua realtime listener
         } catch (error) {
             console.error('Error increasing quantity:', error);
             Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
@@ -52,18 +82,14 @@ const CartScreen = () => {
     };
 
     const handleDecrease = async (itemId: string) => {
+        if (!user?.id) return;
+        
         try {
             const item = cartItems.find(i => i.id === itemId);
             if (!item || item.quantity <= 1) return;
             
-            await mockDataService.updateCartItemQuantity(itemId, item.quantity - 1);
-            setCartItems(prevItems =>
-                prevItems.map(item =>
-                    item.id === itemId && item.quantity > 1
-                        ? { ...item, quantity: item.quantity - 1 }
-                        : item
-                )
-            );
+            await cartService.updateCartItemQuantity(user.id, itemId, item.quantity - 1);
+            // State sẽ tự động cập nhật qua realtime listener
         } catch (error) {
             console.error('Error decreasing quantity:', error);
             Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
@@ -71,6 +97,8 @@ const CartScreen = () => {
     };
 
     const handleDeleteItem = (itemId: string) => {
+        if (!user?.id) return;
+        
         Alert.alert(
             'Xóa sản phẩm',
             'Bạn có chắc muốn xóa sản phẩm này?',
@@ -81,8 +109,8 @@ const CartScreen = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await mockDataService.deleteCartItem(itemId);
-                            setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+                            await cartService.deleteCartItem(user.id, itemId);
+                            // State sẽ tự động cập nhật qua realtime listener
                             Alert.alert('Thành công', 'Đã xóa sản phẩm khỏi giỏ hàng');
                         } catch (error) {
                             console.error('Error deleting item:', error);

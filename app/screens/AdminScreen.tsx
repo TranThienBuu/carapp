@@ -12,13 +12,11 @@ import {
     RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockDataService, Product, User } from '../services/MockDataService';
+import { productService, Product } from '../services/ProductService';
+import { userService, User } from '../services/UserService';
+import { orderService } from '../services/OrderService';
 
-// TODO: Khi connect Firebase, thay đổi import này:
-// import { firebaseDataService as dataService } from '../services/FirebaseDataService';
-const dataService = mockDataService;
-
-const AdminScreen = () => {
+const AdminScreen = ({ navigation }: any) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [statistics, setStatistics] = useState({
@@ -30,7 +28,7 @@ const AdminScreen = () => {
         regularUsers: 0,
     });
 
-    const [activeTab, setActiveTab] = useState<'stats' | 'products' | 'users'>('stats');
+    const [activeTab, setActiveTab] = useState<'stats' | 'products' | 'users' | 'orders'>('stats');
     const [modalVisible, setModalVisible] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [currentItem, setCurrentItem] = useState<any>(null);
@@ -46,6 +44,7 @@ const AdminScreen = () => {
         image: '',
         email: '',
         role: 'user' as 'user' | 'admin',
+        phone: '',
     });
 
     // Load data on mount
@@ -73,7 +72,7 @@ const AdminScreen = () => {
 
     const loadProducts = async () => {
         try {
-            const data = await dataService.getProducts();
+            const data = await productService.getProducts();
             setProducts(data);
         } catch (error) {
             console.error('Load products error:', error);
@@ -82,7 +81,7 @@ const AdminScreen = () => {
 
     const loadUsers = async () => {
         try {
-            const data = await dataService.getUsers();
+            const data = await userService.getUsers();
             setUsers(data);
         } catch (error) {
             console.error('Load users error:', error);
@@ -91,8 +90,16 @@ const AdminScreen = () => {
 
     const loadStatistics = async () => {
         try {
-            const stats = await dataService.getStatistics();
-            setStatistics(stats);
+            const [productStats, userStats, orderStats] = await Promise.all([
+                productService.getProductStatistics(),
+                userService.getUserStatistics(),
+                orderService.getOrderStatistics()
+            ]);
+            
+            setStatistics({
+                ...productStats,
+                ...userStats,
+            });
         } catch (error) {
             console.error('Load statistics error:', error);
         }
@@ -113,7 +120,7 @@ const AdminScreen = () => {
 
         setLoading(true);
         try {
-            await dataService.addProduct({
+            await productService.addProduct({
                 name: formData.name,
                 category: formData.category,
                 price: formData.price,
@@ -141,7 +148,7 @@ const AdminScreen = () => {
 
         setLoading(true);
         try {
-            await dataService.updateProduct(currentItem.id, {
+            await productService.updateProduct(currentItem.id, {
                 name: formData.name,
                 category: formData.category,
                 price: formData.price,
@@ -172,7 +179,7 @@ const AdminScreen = () => {
                     onPress: async () => {
                         setLoading(true);
                         try {
-                            await dataService.deleteProduct(id);
+                            await productService.deleteProduct(id);
                             await loadProducts();
                             await loadStatistics();
                             Alert.alert('Success', 'Product deleted!');
@@ -190,7 +197,7 @@ const AdminScreen = () => {
     const toggleProductStatus = async (id: string) => {
         setLoading(true);
         try {
-            await dataService.toggleProductStatus(id);
+            await productService.toggleProductStatus(id);
             await loadProducts();
             await loadStatistics();
         } catch (error) {
@@ -201,6 +208,58 @@ const AdminScreen = () => {
     };
 
     // User Management
+    const handleAddUser = async () => {
+        if (!formData.name || !formData.email) {
+            Alert.alert('Error', 'Please fill name and email');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await userService.addUser({
+                name: formData.name,
+                email: formData.email,
+                role: formData.role as 'user' | 'admin',
+                phone: formData.phone || '',
+            });
+            await loadUsers();
+            await loadStatistics();
+            resetForm();
+            setModalVisible(false);
+            Alert.alert('Success', 'User added successfully!');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to add user');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditUser = async () => {
+        if (!formData.name || !formData.email) {
+            Alert.alert('Error', 'Please fill name and email');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await userService.updateUser(currentItem.id, {
+                name: formData.name,
+                email: formData.email,
+                role: formData.role as 'user' | 'admin',
+                phone: formData.phone,
+            });
+            await loadUsers();
+            await loadStatistics();
+            resetForm();
+            setModalVisible(false);
+            Alert.alert('Success', 'User updated successfully!');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update user');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleDeleteUser = (id: string) => {
         Alert.alert(
             'Confirm Delete',
@@ -213,7 +272,7 @@ const AdminScreen = () => {
                     onPress: async () => {
                         setLoading(true);
                         try {
-                            await dataService.deleteUser(id);
+                            await userService.deleteUser(id);
                             await loadUsers();
                             await loadStatistics();
                             Alert.alert('Success', 'User deleted!');
@@ -231,7 +290,7 @@ const AdminScreen = () => {
     const toggleUserRole = async (id: string) => {
         setLoading(true);
         try {
-            await dataService.toggleUserRole(id);
+            await userService.toggleUserRole(id);
             await loadUsers();
             await loadStatistics();
         } catch (error) {
@@ -250,21 +309,38 @@ const AdminScreen = () => {
             image: '',
             email: '',
             role: 'user',
+            phone: '',
         });
         setCurrentItem(null);
     };
 
-    const openEditModal = (item: Product) => {
+    const openEditModal = (item: Product | User) => {
         setCurrentItem(item);
-        setFormData({
-            name: item.name,
-            category: item.category,
-            price: item.price,
-            description: item.description,
-            image: item.image || '',
-            email: '',
-            role: 'user',
-        });
+        if ('category' in item) {
+            // Product
+            setFormData({
+                name: item.name,
+                category: item.category,
+                price: item.price,
+                description: item.description,
+                image: item.image || '',
+                email: '',
+                role: 'user',
+                phone: '',
+            });
+        } else {
+            // User
+            setFormData({
+                name: item.name,
+                email: item.email,
+                role: item.role,
+                phone: item.phone || '',
+                category: '',
+                price: '',
+                description: '',
+                image: '',
+            });
+        }
         setEditMode(true);
         setModalVisible(true);
     };
@@ -402,7 +478,16 @@ const AdminScreen = () => {
     // Render Users Tab
     const renderUsers = () => (
         <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>User Management</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <Text style={styles.sectionTitle}>User Management</Text>
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: '#6ab04c' }]}
+                    onPress={openAddModal}
+                >
+                    <Ionicons name="add" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>Add User</Text>
+                </TouchableOpacity>
+            </View>
 
             {users.map(user => (
                 <View key={user.id} style={styles.card}>
@@ -420,6 +505,13 @@ const AdminScreen = () => {
                     </View>
 
                     <View style={styles.cardActions}>
+                        <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: '#2196F3' }]}
+                            onPress={() => openEditModal(user)}
+                        >
+                            <Ionicons name="pencil" size={16} color="white" />
+                        </TouchableOpacity>
+
                         <TouchableOpacity
                             style={[styles.actionButton, { backgroundColor: '#FF9800', flex: 1 }]}
                             onPress={() => toggleUserRole(user.id)}
@@ -509,6 +601,20 @@ const AdminScreen = () => {
                         Users
                     </Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
+                    onPress={() => navigation.navigate('admin-orders')}
+                >
+                    <Ionicons
+                        name="receipt"
+                        size={24}
+                        color={activeTab === 'orders' ? '#6ab04c' : '#999'}
+                    />
+                    <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
+                        Đơn hàng
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             {/* Content */}
@@ -534,7 +640,10 @@ const AdminScreen = () => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
-                                {editMode ? 'Edit Product' : 'Add New Product'}
+                                {editMode 
+                                    ? (activeTab === 'users' ? 'Edit User' : 'Edit Product')
+                                    : (activeTab === 'users' ? 'Add New User' : 'Add New Product')
+                                }
                             </Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <Ionicons name="close" size={24} color="#333" />
@@ -542,62 +651,138 @@ const AdminScreen = () => {
                         </View>
 
                         <ScrollView>
-                            <Text style={styles.inputLabel}>Product Name *</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter product name"
-                                value={formData.name}
-                                onChangeText={text => setFormData({ ...formData, name: text })}
-                            />
+                            {activeTab === 'users' ? (
+                                // User Form
+                                <>
+                                    <Text style={styles.inputLabel}>Name *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter user name"
+                                        value={formData.name}
+                                        onChangeText={text => setFormData({ ...formData, name: text })}
+                                    />
 
-                            <Text style={styles.inputLabel}>Category *</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g., Sedan, SUV, Luxury"
-                                value={formData.category}
-                                onChangeText={text => setFormData({ ...formData, category: text })}
-                            />
+                                    <Text style={styles.inputLabel}>Email *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter email"
+                                        value={formData.email}
+                                        onChangeText={text => setFormData({ ...formData, email: text })}
+                                        keyboardType="email-address"
+                                    />
 
-                            <Text style={styles.inputLabel}>Price (USD) *</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g., 25000"
-                                value={formData.price}
-                                onChangeText={text => setFormData({ ...formData, price: text })}
-                                keyboardType="numeric"
-                            />
+                                    <Text style={styles.inputLabel}>Phone</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter phone number"
+                                        value={formData.phone}
+                                        onChangeText={text => setFormData({ ...formData, phone: text })}
+                                        keyboardType="phone-pad"
+                                    />
 
-                            <Text style={styles.inputLabel}>Image URL</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="https://example.com/image.jpg"
-                                value={formData.image}
-                                onChangeText={text => setFormData({ ...formData, image: text })}
-                            />
+                                    <Text style={styles.inputLabel}>Role *</Text>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.roleButton,
+                                                formData.role === 'user' && styles.roleButtonActive
+                                            ]}
+                                            onPress={() => setFormData({ ...formData, role: 'user' })}
+                                        >
+                                            <Text style={[
+                                                styles.roleButtonText,
+                                                formData.role === 'user' && styles.roleButtonTextActive
+                                            ]}>User</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.roleButton,
+                                                formData.role === 'admin' && styles.roleButtonActive
+                                            ]}
+                                            onPress={() => setFormData({ ...formData, role: 'admin' })}
+                                        >
+                                            <Text style={[
+                                                styles.roleButtonText,
+                                                formData.role === 'admin' && styles.roleButtonTextActive
+                                            ]}>Admin</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
-                            <Text style={styles.inputLabel}>Description</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder="Enter product description"
-                                value={formData.description}
-                                onChangeText={text => setFormData({ ...formData, description: text })}
-                                multiline
-                                numberOfLines={4}
-                            />
+                                    <TouchableOpacity
+                                        style={styles.submitButton}
+                                        onPress={editMode ? handleEditUser : handleAddUser}
+                                        disabled={loading}
+                                    >
+                                        {loading ? (
+                                            <ActivityIndicator color="white" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>
+                                                {editMode ? 'Update User' : 'Add User'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                // Product Form
+                                <>
+                                    <Text style={styles.inputLabel}>Product Name *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter product name"
+                                        value={formData.name}
+                                        onChangeText={text => setFormData({ ...formData, name: text })}
+                                    />
 
-                            <TouchableOpacity
-                                style={styles.submitButton}
-                                onPress={editMode ? handleEditProduct : handleAddProduct}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <ActivityIndicator color="white" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>
-                                        {editMode ? 'Update Product' : 'Add Product'}
-                                    </Text>
-                                )}
-                            </TouchableOpacity>
+                                    <Text style={styles.inputLabel}>Category *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g., Sedan, SUV, Luxury"
+                                        value={formData.category}
+                                        onChangeText={text => setFormData({ ...formData, category: text })}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Price (USD) *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g., 25000"
+                                        value={formData.price}
+                                        onChangeText={text => setFormData({ ...formData, price: text })}
+                                        keyboardType="numeric"
+                                    />
+
+                                    <Text style={styles.inputLabel}>Image URL</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="https://example.com/image.jpg"
+                                        value={formData.image}
+                                        onChangeText={text => setFormData({ ...formData, image: text })}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Description</Text>
+                                    <TextInput
+                                        style={[styles.input, styles.textArea]}
+                                        placeholder="Enter product description"
+                                        value={formData.description}
+                                        onChangeText={text => setFormData({ ...formData, description: text })}
+                                        multiline
+                                        numberOfLines={4}
+                                    />
+
+                                    <TouchableOpacity
+                                        style={styles.submitButton}
+                                        onPress={editMode ? handleEditProduct : handleAddProduct}
+                                        disabled={loading}
+                                    >
+                                        {loading ? (
+                                            <ActivityIndicator color="white" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>
+                                                {editMode ? 'Update Product' : 'Add Product'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </ScrollView>
                     </View>
                 </View>
@@ -892,6 +1077,27 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    roleButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        alignItems: 'center',
+        backgroundColor: 'white',
+    },
+    roleButtonActive: {
+        borderColor: '#6ab04c',
+        backgroundColor: '#f0f9f0',
+    },
+    roleButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    roleButtonTextActive: {
+        color: '#6ab04c',
     },
 });
 

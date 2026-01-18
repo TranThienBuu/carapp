@@ -3,12 +3,12 @@ import {View, Text} from "react-native";
 import {createBottomTabNavigator} from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/HomeScreen";
 import ExploreScreen from "../screens/ExploreScreen";
-import AdminScreen from "../screens/AdminScreen";
 import { Ionicons } from '@expo/vector-icons';
 import ProfileScreen from "../screens/ProfileScreen";
 import HomeScreenStackNavigation from "./HomeScreenStackNavigation";
 import ExploreScreenStackNavigation from "./ExploreScreenStackNavigation";
 import ProfileStackNavigation from "./ProfileStackNavigation";
+import AdminStackNavigation from "./AdminStackNavigation";
 
 const Tab = createBottomTabNavigator();
 const TabNavigation = () => {
@@ -35,7 +35,7 @@ const TabNavigation = () => {
                             )
                         }}
             />
-            <Tab.Screen name="admin" component={AdminScreen}
+            <Tab.Screen name="admin" component={AdminStackNavigation}
                         options={{
                             tabBarLabel:({color})=>(
                                 <Text style={{color:color, fontSize: 16, marginBottom:3}}>Admin</Text>

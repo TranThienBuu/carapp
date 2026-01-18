@@ -10,26 +10,32 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockDataService, Order } from '../services/MockDataService';
+import { orderService, Order } from '../services/OrderService';
+import { useUser } from '../context/AuthContext';
 
 const OrdersScreen = ({ navigation }: any) => {
+    const { user } = useUser();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        loadOrders();
-    }, []);
+        if (user?.id) {
+            loadOrders();
+        }
+    }, [user]);
 
     const loadOrders = async () => {
+        if (!user?.id) {
+            Alert.alert('Lỗi', 'Vui lòng đăng nhập để xem đơn hàng');
+            navigation.goBack();
+            return;
+        }
+
         setLoading(true);
         try {
-            const data = await mockDataService.getOrders();
-            // Sắp xếp theo ngày mới nhất
-            const sortedOrders = data.sort((a, b) => 
-                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
-            setOrders(sortedOrders);
+            const data = await orderService.getUserOrders(user.id);
+            setOrders(data);
         } catch (error) {
             console.error('Error loading orders:', error);
             Alert.alert('Lỗi', 'Không thể tải danh sách đơn hàng');
@@ -42,6 +48,35 @@ const OrdersScreen = ({ navigation }: any) => {
     const handleRefresh = () => {
         setRefreshing(true);
         loadOrders();
+    };
+
+    const handleCancelOrder = (order: Order) => {
+        if (order.status !== 'pending') {
+            Alert.alert('Không thể hủy', 'Chỉ có thể hủy đơn hàng đang chờ xử lý');
+            return;
+        }
+
+        Alert.alert(
+            'Hủy đơn hàng',
+            `Bạn có chắc muốn hủy đơn hàng ${order.orderId}?`,
+            [
+                { text: 'Không', style: 'cancel' },
+                {
+                    text: 'Hủy đơn',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await orderService.cancelOrder(order.id, 'Người dùng hủy đơn');
+                            Alert.alert('Thành công', 'Đã hủy đơn hàng');
+                            loadOrders();
+                        } catch (error) {
+                            console.error('Error canceling order:', error);
+                            Alert.alert('Lỗi', 'Không thể hủy đơn hàng');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const getStatusColor = (status: Order['status']) => {
@@ -127,6 +162,16 @@ const OrdersScreen = ({ navigation }: any) => {
             <Text style={styles.orderDate}>
                 {new Date(item.createdAt).toLocaleString('vi-VN')}
             </Text>
+
+            {item.status === 'pending' && (
+                <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelOrder(item)}
+                >
+                    <Ionicons name="close-circle-outline" size={18} color="#F44336" />
+                    <Text style={styles.cancelButtonText}>Hủy đơn hàng</Text>
+                </TouchableOpacity>
+            )}
         </TouchableOpacity>
     );
 
@@ -264,6 +309,21 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#999',
         textAlign: 'right',
+    },
+    cancelButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
+        padding: 8,
+        borderRadius: 8,
+        backgroundColor: '#FFEBEE',
+    },
+    cancelButtonText: {
+        marginLeft: 6,
+        color: '#F44336',
+        fontSize: 14,
+        fontWeight: '600',
     },
     loadingContainer: {
         flex: 1,
