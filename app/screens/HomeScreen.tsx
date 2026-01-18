@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import Header from "../components/Header";
-import { mockDataService } from "../services/MockDataService";
+import { productService } from "../services/ProductService";
 import Slider from "../components/Slider";
 import Category from "../components/Category";
 import LatestItemList from "../components/LatestItemList";
@@ -79,7 +79,7 @@ export default function HomeScreen() {
 
     const getLatestItemList = async () => {
         try {
-            const products = await mockDataService.getProducts();
+            const products = await productService.getProducts();
             // Convert sang format mà LatestItemList component mong đợi
             const formattedProducts = products
                 .filter(p => p.status === 'active') // Chỉ lấy sản phẩm active

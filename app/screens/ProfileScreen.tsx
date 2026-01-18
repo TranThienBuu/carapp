@@ -28,6 +28,14 @@ export default function ProfileScreen() {
         },
         {
             id: 2,
+            name: "Đơn hàng của tôi",
+            icon: "receipt",
+            path: "orders",
+            color: "#F59E0B",
+            bgColor: "#FEF3C7"
+        },
+        {
+            id: 3,
             name: "Khám phá",
             icon: "compass",
             path: "explore-nav",
@@ -35,7 +43,7 @@ export default function ProfileScreen() {
             bgColor: "#F5F3FF"
         },
         {
-            id: 3,
+            id: 4,
             name: "Hướng dẫn",
             icon: "help-circle",
             url: "",
@@ -43,7 +51,7 @@ export default function ProfileScreen() {
             bgColor: "#ECFDF5"
         },
         {
-            id: 4,
+            id: 5,
             name: "Đăng xuất",
             icon: "log-out",
             color: "#EF4444",

@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUser } from "../context/AuthContext";
 import { doc, deleteDoc, getFirestore, query, where, collection, getDocs } from "firebase/firestore";
 import { app } from "../../firebase.config";
-import { mockDataService } from "../services/MockDataService";
+import { cartService } from "../services/CartService";
 
 export default function ProductDetail({ navigation }) {
 
@@ -92,11 +92,15 @@ export default function ProductDetail({ navigation }) {
 
     const handleAddToCart = async () => {
         if (!product) return;
+        if (!user?.id) {
+            Alert.alert('Lỗi', 'Vui lòng đăng nhập để thêm vào giỏ hàng');
+            return;
+        }
         
         setLoading(true);
         try {
-            // Thêm sản phẩm vào giỏ hàng qua mockDataService
-            await mockDataService.addToCart({
+            // Thêm sản phẩm vào giỏ hàng qua Firebase Realtime Database
+            await cartService.addToCart(user.id, {
                 productId: product.id || Date.now().toString(),
                 name: product.title,
                 price: parseFloat(product.price) || 0,

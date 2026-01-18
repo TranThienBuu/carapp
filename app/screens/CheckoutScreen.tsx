@@ -4,7 +4,9 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityInd
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useUser } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { mockDataService, CartItem } from '../services/MockDataService';
+import { CartItem } from '../services/CartService';
+import { orderService } from '../services/OrderService';
+import { cartService } from '../services/CartService';
 
 interface RouteParams {
     cartItems?: CartItem[];
@@ -30,13 +32,17 @@ export default function CheckoutScreen() {
     // Thanh toán trực tiếp (COD)
     const handleCashPayment = async () => {
         if (!validateForm()) return;
+        if (!user?.id) {
+            Alert.alert('Lỗi', 'Vui lòng đăng nhập để đặt hàng');
+            return;
+        }
         
         setLoading(true);
         try {
             const orderId = `DH${new Date().getTime()}`;
             const orderData = {
                 orderId,
-                userId: user?.id || 'guest',
+                userId: user.id,
                 userName: name,
                 userEmail: user?.primaryEmailAddress?.emailAddress || '',
                 phone,
@@ -49,15 +55,15 @@ export default function CheckoutScreen() {
                 status: 'pending' as const,
             };
 
-            // Lưu đơn hàng vào mock data
-            await mockDataService.createOrder(orderData);
+            // Lưu đơn hàng vào Firebase Realtime Database
+            await orderService.createOrder(orderData);
 
             // Xóa giỏ hàng sau khi đặt hàng thành công
-            await mockDataService.clearCart();
+            await cartService.clearCart(user.id);
             
             Alert.alert(
                 '✅ Đặt hàng thành công!',
-                `Đơn hàng của bạn đã được ghi nhận.\n\nThông tin:\n- Người nhận: ${name}\n- SĐT: ${phone}\n- Tổng tiền: ${finalTotal.toLocaleString('vi-VN')}đ\n\nVui lòng chuẩn bị tiền mặt khi nhận hàng.`,
+                `Đơn hàng của bạn đã được ghi nhận.\n\nThông tin:\n- Mã đơn hàng: ${orderId}\n- Người nhận: ${name}\n- SĐT: ${phone}\n- Tổng tiền: ${finalTotal.toLocaleString('vi-VN')}đ\n\nVui lòng chuẩn bị tiền mặt khi nhận hàng.`,
                 [
                     {
                         text: 'OK',
@@ -76,13 +82,17 @@ export default function CheckoutScreen() {
     // Thanh toán online VNPay
     const handleOnlinePayment = async () => {
         if (!validateForm()) return;
+        if (!user?.id) {
+            Alert.alert('Lỗi', 'Vui lòng đăng nhập để đặt hàng');
+            return;
+        }
         
         setLoading(true);
         try {
             const orderId = `DH${new Date().getTime()}`;
             const orderData = {
                 orderId,
-                userId: user?.id || 'guest',
+                userId: user.id,
                 userName: name,
                 userEmail: user?.primaryEmailAddress?.emailAddress || '',
                 phone,
@@ -95,8 +105,8 @@ export default function CheckoutScreen() {
                 status: 'pending' as const,
             };
 
-            // Lưu đơn hàng vào mock data
-            await mockDataService.createOrder(orderData);
+            // Lưu đơn hàng vào Firebase Realtime Database
+            await orderService.createOrder(orderData);
             
             // Chuyển sang màn hình thanh toán VNPay
             navigation.navigate('payment', {
