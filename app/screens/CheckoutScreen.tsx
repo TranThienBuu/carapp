@@ -52,6 +52,7 @@ export default function CheckoutScreen() {
                 shippingFee,
                 total: finalTotal,
                 paymentMethod: 'COD' as const,
+                paymentStatus: 'unpaid' as const,
                 status: 'pending' as const,
             };
 
@@ -67,7 +68,7 @@ export default function CheckoutScreen() {
                 [
                     {
                         text: 'OK',
-                        onPress: () => navigation.navigate('home')
+                        onPress: () => navigation.navigate('profile-nav', { screen: 'orders' })
                     }
                 ]
             );
@@ -102,18 +103,21 @@ export default function CheckoutScreen() {
                 shippingFee,
                 total: finalTotal,
                 paymentMethod: 'VNPay' as const,
+                paymentStatus: 'unpaid' as const,
                 status: 'pending' as const,
             };
 
             // Lưu đơn hàng vào Firebase Realtime Database
-            await orderService.createOrder(orderData);
+            const orderKey = await orderService.createOrder(orderData);
             
             // Chuyển sang màn hình thanh toán VNPay
             navigation.navigate('payment', {
                 amount: finalTotal,
                 productTitle: `Đơn hàng ${orderId.substring(0, 10)}`,
                 orderId: orderId,
-                orderData: orderData
+                orderData: orderData,
+                orderKey,
+                userId: user.id,
             });
         } catch (error) {
             console.error('Lỗi:', error);

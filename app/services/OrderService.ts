@@ -14,6 +14,7 @@ export interface Order {
     shippingFee: number;
     total: number;
     paymentMethod: 'COD' | 'VNPay' | 'MoMo';
+    paymentStatus?: 'unpaid' | 'paid' | 'refunded';
     status: 'pending' | 'paid' | 'processing' | 'shipping' | 'completed' | 'cancelled';
     createdAt: string;
     updatedAt: string;
@@ -27,12 +28,20 @@ export interface Order {
 
 class OrderService {
 
+    private normalizePaymentStatus(raw: any): any {
+        if (!raw) return raw;
+        if (raw.paymentStatus) return raw;
+        const inferred = raw?.paymentInfo?.paidAt || raw?.status === 'paid' ? 'paid' : 'unpaid';
+        return { ...raw, paymentStatus: inferred };
+    }
+
     // Tạo đơn hàng mới
     async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
         try {
             const idToken = await AsyncStorage.getItem('idToken');
             const order = {
                 ...orderData,
+                paymentStatus: orderData.paymentStatus || 'unpaid',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
@@ -53,12 +62,62 @@ class OrderService {
                     orderId: orderData.orderId,
                     total: orderData.total,
                     status: orderData.status,
+                    paymentStatus: orderData.paymentStatus || 'unpaid',
                     createdAt: order.createdAt
                 }),
             });
             return orderKey;
         } catch (error) {
             console.error('Error creating order:', error);
+            throw error;
+        }
+    }
+
+    // Cập nhật trạng thái thanh toán (không đổi trạng thái xử lý/duyệt đơn)
+    async updatePaymentStatus(
+        orderId: string,
+        paymentStatus: NonNullable<Order['paymentStatus']>,
+        paymentInfo?: Order['paymentInfo']
+    ): Promise<void> {
+        try {
+            const idToken = await AsyncStorage.getItem('idToken');
+            const updateData: any = {
+                paymentStatus,
+                updatedAt: new Date().toISOString(),
+            };
+            if (paymentInfo) {
+                updateData.paymentInfo = paymentInfo;
+            }
+
+            const res = await fetch(
+                `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData),
+                }
+            );
+            if (!res.ok) throw new Error('Permission denied');
+
+            // Update userOrders paymentStatus
+            const orderRes = await fetch(
+                `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`
+            );
+            if (orderRes.ok) {
+                const order = await orderRes.json();
+                if (order && order.userId) {
+                    await fetch(
+                        `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/userOrders/${order.userId}/${orderId}.json?auth=${idToken}`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ paymentStatus }),
+                        }
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('Error updating payment status:', error);
             throw error;
         }
     }
@@ -80,19 +139,29 @@ class OrderService {
                 const data = await res.json();
                 if (data) {
                     orders = Object.keys(data)
-                        .map(key => ({ id: key, ...data[key] }))
+                        .map(key => ({ id: key, ...this.normalizePaymentStatus(data[key]) }))
                         .filter(order => order.userId === userId);
                 }
             } else {
-                // User thường: lấy từ userOrders/{userId}
+                // User thường: userOrders chỉ lưu summary, cần hydrate chi tiết từ /orders/{orderKey}
                 const url = `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/userOrders/${userId}.json?auth=${idToken}`;
                 console.log('🔗 User fetching userOrders URL:', url);
                 const res = await fetch(url);
                 if (!res.ok) throw new Error('Permission denied');
                 const data = await res.json();
-                if (data) {
-                    orders = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-                }
+                if (!data) return [];
+
+                const orderKeys = Object.keys(data);
+                const hydrated = await Promise.all(
+                    orderKeys.map(async (key) => {
+                        try {
+                            return await this.getOrderById(key);
+                        } catch (e) {
+                            return null;
+                        }
+                    })
+                );
+                orders = hydrated.filter((o): o is Order => !!o);
             }
             return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (error) {
@@ -107,7 +176,7 @@ class OrderService {
             const idToken = await AsyncStorage.getItem('idToken');
             const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`);
             if (!res.ok) throw new Error('Permission denied');
-            const data = await res.json();
+            const data = this.normalizePaymentStatus(await res.json());
             if (!data) return null;
             return {
                 id: orderId,
@@ -130,7 +199,7 @@ class OrderService {
             const key = Object.keys(data)[0];
             return {
                 id: key,
-                ...data[key]
+                ...this.normalizePaymentStatus(data[key])
             };
         } catch (error) {
             console.error('Error getting order by orderId:', error);
@@ -210,7 +279,7 @@ class OrderService {
             if (!data) return [];
             const orders = Object.keys(data).map(key => ({
                 id: key,
-                ...data[key]
+                ...this.normalizePaymentStatus(data[key])
             }));
             return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (error) {

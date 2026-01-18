@@ -103,21 +103,27 @@ const OrdersScreen = ({ navigation }: any) => {
         return texts[status] || status;
     };
 
+    const getPaymentStatusText = (paymentStatus?: Order['paymentStatus'], method?: Order['paymentMethod']) => {
+        if (!paymentStatus) {
+            // Backward-compatible for old orders
+            return method === 'VNPay' ? 'Chưa thanh toán' : 'Chưa thanh toán';
+        }
+        switch (paymentStatus) {
+            case 'paid':
+                return 'Đã thanh toán';
+            case 'refunded':
+                return 'Đã hoàn tiền';
+            case 'unpaid':
+            default:
+                return 'Chưa thanh toán';
+        }
+    };
+
     const renderOrderItem = ({ item }: { item: Order }) => (
         <TouchableOpacity
             style={styles.orderCard}
             onPress={() => {
-                Alert.alert(
-                    'Chi tiết đơn hàng',
-                    `Mã đơn: ${item.orderId}\n` +
-                    `Người nhận: ${item.userName}\n` +
-                    `SĐT: ${item.phone}\n` +
-                    `Địa chỉ: ${item.address}\n` +
-                    `Số sản phẩm: ${(item.items && Array.isArray(item.items)) ? item.items.length : 0}\n` +
-                    `Tổng tiền: ${item.total.toLocaleString('vi-VN')}đ\n` +
-                    `Phương thức: ${item.paymentMethod}\n` +
-                    `Trạng thái: ${getStatusText(item.status)}`
-                );
+                navigation.navigate('order-detail', { orderId: item.id });
             }}
         >
             <View style={styles.orderHeader}>
@@ -158,6 +164,10 @@ const OrdersScreen = ({ navigation }: any) => {
                     {item.total.toLocaleString('vi-VN')}đ
                 </Text>
             </View>
+
+            <Text style={[styles.orderDate, { textAlign: 'left' }]}>
+                Thanh toán: {getPaymentStatusText(item.paymentStatus, item.paymentMethod)}
+            </Text>
 
             <Text style={styles.orderDate}>
                 {new Date(item.createdAt).toLocaleString('vi-VN')}
