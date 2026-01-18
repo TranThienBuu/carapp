@@ -4,13 +4,13 @@ import { useIsFocused } from '@react-navigation/native';
 import Header from "../components/Header";
 import { productService } from "../services/ProductService";
 import Slider from "../components/Slider";
-import Category from "../components/Category";
+// ...existing code...
 import LatestItemList from "../components/LatestItemList";
 
 export default function HomeScreen() {
     const isFocused = useIsFocused();
     const [sliderList, setSliderList] = useState([]);
-    const [categoryList, setCategoryList] = useState([]);
+    // ...existing code...
     const [latestItemList, setLatestItemList] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredItems, setFilteredItems] = useState([]);
@@ -28,7 +28,7 @@ export default function HomeScreen() {
             setError(null);
             await Promise.all([
                 getSliders(),
-                getCategoryList(),
+                // ...existing code...
                 getLatestItemList()
             ]);
         } catch (err) {
@@ -58,24 +58,15 @@ export default function HomeScreen() {
     }, [searchQuery, latestItemList]);
 
     const getSliders = async () => {
-        setSliderList([]);
-        // Mock sliders data - bạn có thể custom lại
+        // Sử dụng ảnh thực tế để slider hiển thị đẹp
         const mockSliders = [
-            { name: 'Slider 1', image: 'https://via.placeholder.com/400x200' },
-            { name: 'Slider 2', image: 'https://via.placeholder.com/400x200' },
+            { name: 'Slider 1', image: 'https://vinfastauto.com/themes/porto/img/home/slider/vf9-1.jpg' },
+            { name: 'Slider 2', image: 'https://vinfastauto.com/themes/porto/img/home/slider/vf8-1.jpg' },
         ];
         setSliderList(mockSliders);
     };
 
-    const getCategoryList = async () => {
-        // Mock categories data - bạn có thể custom lại
-        const mockCategories = [
-            { name: 'Sedan', icon: '🚗', id: '1' },
-            { name: 'SUV', icon: '🚙', id: '2' },
-            { name: 'Luxury', icon: '🚘', id: '3' },
-        ];
-        setCategoryList(mockCategories);
-    };
+    // ...existing code...
 
     const getLatestItemList = async () => {
         try {
@@ -128,31 +119,37 @@ export default function HomeScreen() {
         );
     }
 
+    // Lấy 2 sản phẩm mới nhất (giả sử đã được sắp xếp theo createdAt mới nhất)
+    const latestTwo = filteredItems.slice(0, 2);
     return (
         <ScrollView
             nestedScrollEnabled={true}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
+            style={{ backgroundColor: '#f6f8fa' }}
         >
-            <View style={styles.container}>
+            <View style={styles.containerPro}>
                 <Header onSearch={handleSearch} />
-                <Slider sliderList={sliderList} />
-                <Category categoryList={categoryList} />
-                <LatestItemList
-                    latestItemList={filteredItems}
-                    heading={"Sản phẩm mới nhất"}
-                />
+                <View style={{ marginTop: 24, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#006266', marginBottom: 12, textAlign: 'center', letterSpacing: 0.5 }}>Sản phẩm mới nhất</Text>
+                    <LatestItemList
+                        latestItemList={latestTwo}
+                        heading={null}
+                        highlight
+                    />
+                </View>
             </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    containerPro: {
         flex: 1,
-        paddingVertical: 16,
-        paddingHorizontal: 12,
-        backgroundColor: 'white',
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+        backgroundColor: '#f6f8fa',
+        minHeight: '100%',
     },
 });

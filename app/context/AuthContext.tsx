@@ -38,6 +38,7 @@ interface User {
   primaryEmailAddress: { emailAddress: string | null };
   email?: string | null;
   isAdmin?: boolean;
+  phone?: string | null;
 }
 
 
@@ -45,6 +46,8 @@ interface AuthContextType {
   user: User | null;
   isLoaded: boolean;
   isAdmin: boolean;
+  setUser: (user: User | null) => void;
+  updateUser: (data: Partial<User>) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInDemo: () => Promise<void>;
@@ -59,6 +62,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoaded: false,
   isAdmin: false,
+  setUser: () => {},
+  updateUser: async () => {},
   signOut: async () => {},
   signInWithGoogle: async () => {},
   signInDemo: async () => {},
@@ -70,8 +75,8 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 export const useUser = () => {
-  const { user, isLoaded, isAdmin } = useContext(AuthContext);
-  return { user, isLoaded, isAdmin };
+  const { user, isLoaded, isAdmin, setUser, updateUser } = useContext(AuthContext);
+  return { user, isLoaded, isAdmin, setUser, updateUser };
 };
 
 // ====== PROVIDER ======
@@ -416,12 +421,22 @@ const googleAuthConfig = {
     await AsyncStorage.removeItem('idToken');
   };
 
+  // ===== UPDATE USER PROFILE =====
+  const updateUser = async (data: Partial<User>) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...data };
+    setUser(updatedUser);
+    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isLoaded,
         isAdmin,
+        setUser,
+        updateUser,
         signOut,
         signInWithGoogle,
         signInDemo,

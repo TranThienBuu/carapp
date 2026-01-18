@@ -13,17 +13,16 @@ type SliderProps = {
 const Slider: React.FC<SliderProps> = ({ sliderList }) => {
 
     return (
-        <View className="mt-5">
-            <Text className="font-semibold text-[16px]">Gợi ý cho bạn!</Text>
+        <View style={{ marginTop: 5 }}>
             <FlatList
                 data={sliderList}
                 keyExtractor={(_, index) => index.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 renderItem={({ item,index }) => (
-                    <View >
+                    <View style={styles.cardShadow}>
                         <Image source={{ uri: item?.image }}
-                               className="h-[200px] w-[300px] mr-3 rounded-lg object-contain"
+                               style={styles.sliderImage}
                         />
                     </View>
                 )}
@@ -34,27 +33,27 @@ const Slider: React.FC<SliderProps> = ({ sliderList }) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-    },
     contentContainer: {
         alignItems: 'center',
+        paddingLeft: 8,
+        paddingRight: 8,
     },
-    itemContainer: {
-        marginHorizontal: 8,
-        borderRadius: 8,
-        backgroundColor: '#f9f9f9',
+    cardShadow: {
+        marginRight: 16,
+        borderRadius: 18,
+        backgroundColor: '#fff',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.13,
+        shadowRadius: 8,
+        elevation: 6,
         overflow: 'hidden',
     },
-    image: {
-        width: 300,
-        height: 150,
+    sliderImage: {
+        width: 320,
+        height: 180,
+        borderRadius: 18,
+        resizeMode: 'cover',
     },
 });
 

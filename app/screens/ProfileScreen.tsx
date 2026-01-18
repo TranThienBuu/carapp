@@ -18,7 +18,6 @@ export default function ProfileScreen() {
     }
 
     const menuList = [
-        // ...Ẩn mục Sản phẩm của tôi
         {
             id: 2,
             name: "Đơn hàng của tôi",
@@ -34,14 +33,6 @@ export default function ProfileScreen() {
             path: "explore-nav",
             color: "#8B5CF6",
             bgColor: "#F5F3FF"
-        },
-        {
-            id: 4,
-            name: "Hướng dẫn",
-            icon: "help-circle",
-            url: "",
-            color: "#10B981",
-            bgColor: "#ECFDF5"
         },
         {
             id: 5,
@@ -60,34 +51,42 @@ export default function ProfileScreen() {
 
     return(
         <ScrollView className="flex-1 bg-gray-100">
-            {/* Header with Gradient */}
-            <View className="bg-gradient-to-b from-blue-500 to-blue-600 pb-8 pt-12 rounded-b-3xl shadow-lg">
-                <View className="items-center px-5">
-                    {/* Avatar with border */}
-                    <View className="bg-white rounded-full p-1 shadow-xl">
+            {/* User Card Section */}
+            <View className="px-5 pt-12 pb-6">
+                <View style={{backgroundColor: '#fff', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 10, elevation: 6}}>
+                    {/* Avatar with border and shadow */}
+                    <View style={{borderWidth: 4, borderColor: '#6ab04c', borderRadius: 100, padding: 4, backgroundColor: '#fff', shadowColor: '#6ab04c', shadowOpacity: 0.15, shadowRadius: 8, elevation: 4}}>
                         <Image 
                             source={{uri: user?.imageUrl}}
-                            className="w-[120px] h-[120px] rounded-full"
+                            style={{width: 120, height: 120, borderRadius: 60, backgroundColor: '#e5e7eb'}} 
                         />
                     </View>
-                    
-                    {/* User Info */}
-                    <Text className="font-bold text-[28px] mt-4 text-white">
-                        {user?.fullName}
-                    </Text>
-                    <Text className="text-[16px] mt-1 text-blue-100">
-                        {user?.primaryEmailAddress?.emailAddress}
-                    </Text>
-                    
+                    {/* Name */}
+                    <Text style={{fontWeight: 'bold', fontSize: 28, marginTop: 16, color: '#222'}}> {user?.fullName} </Text>
+                    {/* Email */}
+                    <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 6}}>
+                        <Ionicons name="mail" size={18} color="#6ab04c" style={{marginRight: 6}} />
+                        <Text style={{fontSize: 15, color: '#6ab04c', fontWeight: '600'}}>{user?.primaryEmailAddress?.emailAddress}</Text>
+                    </View>
+                    {/* Optional: Phone if available */}
+                    {user?.phone && (
+                        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+                            <Ionicons name="call" size={18} color="#6ab04c" style={{marginRight: 6}} />
+                            <Text style={{fontSize: 15, color: '#6ab04c', fontWeight: '600'}}>{user.phone}</Text>
+                        </View>
+                    )}
                     {/* Edit Profile Button */}
-                    <TouchableOpacity className="mt-4 bg-white/20 px-6 py-2 rounded-full border border-white/30">
-                        <Text className="text-white font-semibold">Chỉnh sửa hồ sơ</Text>
+                    <TouchableOpacity
+                        style={{marginTop: 18, backgroundColor: '#6ab04c', paddingHorizontal: 32, paddingVertical: 10, borderRadius: 20}}
+                        onPress={() => navigation.navigate('ProfileEditScreen')}
+                    >
+                        <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>Chỉnh sửa hồ sơ</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Stats Cards */}
-            <View className="flex-row justify-around px-5 -mt-8 mb-6">
+            <View className="flex-row justify-around px-5 mb-6">
                 {statsData.map((stat, index) => (
                     <LinearGradient
                         key={index}
@@ -108,36 +107,66 @@ export default function ProfileScreen() {
             {/* Menu Items */}
             <View className="px-5 pb-8">
                 <Text className="font-bold text-[18px] text-gray-800 mb-4">Chức năng</Text>
-                
                 <FlatList 
                     data={menuList}
                     scrollEnabled={false}
                     numColumns={2}
                     columnWrapperStyle={{justifyContent: 'space-between'}}
-                    renderItem={({item, index}) => (
-                        <TouchableOpacity
-                            onPress={() => onMenuPress(item)}
-                            className="bg-white rounded-2xl p-5 mb-4 shadow-sm items-center"
-                            style={{width: '48%'}}
-                        >
-                            <View 
-                                className="rounded-full p-4 mb-3"
-                                style={{backgroundColor: item.bgColor}}
+                    renderItem={({item, index}) => {
+                        // Nếu là panel Đăng xuất, cho chiếm cả 2 cột
+                        if (item.name === 'Đăng xuất') {
+                            return (
+                                <TouchableOpacity
+                                    onPress={() => onMenuPress(item)}
+                                    className="bg-white rounded-2xl p-5 mb-4 shadow-sm items-center"
+                                    style={{width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', alignSelf: 'center'}}
+                                >
+                                    <View 
+                                        className="rounded-full p-4 mb-3"
+                                        style={{backgroundColor: item.bgColor, marginRight: 16}}
+                                    >
+                                        <Ionicons 
+                                            name={item.icon as any} 
+                                            size={32} 
+                                            color={item.color} 
+                                        />
+                                    </View>
+                                    <Text 
+                                        className="text-[16px] font-bold text-center"
+                                        style={{color: item.color}}
+                                    >
+                                        {item.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        }
+                        // Panel thường
+                        return (
+                            <TouchableOpacity
+                                onPress={() => onMenuPress(item)}
+                                className="bg-white rounded-2xl p-5 mb-4 shadow-sm items-center"
+                                style={{width: '48%'}}
                             >
-                                <Ionicons 
-                                    name={item.icon as any} 
-                                    size={32} 
-                                    color={item.color} 
-                                />
-                            </View>
-                            <Text 
-                                className="text-[14px] font-semibold text-center"
-                                style={{color: item.color}}
-                            >
-                                {item.name}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                                <View 
+                                    className="rounded-full p-4 mb-3"
+                                    style={{backgroundColor: item.bgColor}}
+                                >
+                                    <Ionicons 
+                                        name={item.icon as any} 
+                                        size={32} 
+                                        color={item.color} 
+                                    />
+                                </View>
+                                <Text 
+                                    className="text-[14px] font-semibold text-center"
+                                    style={{color: item.color}}
+                                >
+                                    {item.name}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    }}
+                    keyExtractor={(item, index) => item.id?.toString() || index.toString()}
                 />
             </View>
         </ScrollView>

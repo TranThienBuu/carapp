@@ -11,6 +11,7 @@ import {
     ActivityIndicator,
     RefreshControl,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { productService, Product } from '../services/ProductService';
 import { userService, User } from '../services/UserService';
@@ -354,55 +355,28 @@ const AdminScreen = ({ navigation }: any) => {
     // Render Statistics Tab
     const renderStats = () => (
         <View style={styles.statsContainer}>
-            <View style={styles.warningBanner}>
-                <Ionicons name="flask" size={20} color="#FF9800" />
-                <Text style={styles.warningText}>
-                    🧪 TEST MODE - Using Mock Data (No Firebase)
-                </Text>
-            </View>
-
             <Text style={styles.sectionTitle}>Dashboard Overview</Text>
-            
             <View style={styles.statsGrid}>
-                <View style={[styles.statCard, { backgroundColor: '#4CAF50' }]}>
+                <View style={[styles.statCard, { backgroundColor: '#4CAF50' }]}> 
                     <Ionicons name="cart" size={32} color="white" />
                     <Text style={styles.statNumber}>{statistics.totalProducts}</Text>
                     <Text style={styles.statLabel}>Total Products</Text>
                 </View>
-
-                <View style={[styles.statCard, { backgroundColor: '#2196F3' }]}>
+                <View style={[styles.statCard, { backgroundColor: '#2196F3' }]}> 
                     <Ionicons name="checkmark-circle" size={32} color="white" />
                     <Text style={styles.statNumber}>{statistics.activeProducts}</Text>
                     <Text style={styles.statLabel}>Active</Text>
                 </View>
-
-                <View style={[styles.statCard, { backgroundColor: '#FF9800' }]}>
+                <View style={[styles.statCard, { backgroundColor: '#FF9800' }]}> 
                     <Ionicons name="people" size={32} color="white" />
                     <Text style={styles.statNumber}>{statistics.totalUsers}</Text>
                     <Text style={styles.statLabel}>Total Users</Text>
                 </View>
-
-                <View style={[styles.statCard, { backgroundColor: '#9C27B0' }]}>
+                <View style={[styles.statCard, { backgroundColor: '#9C27B0' }]}> 
                     <Ionicons name="shield-checkmark" size={32} color="white" />
                     <Text style={styles.statNumber}>{statistics.adminUsers}</Text>
                     <Text style={styles.statLabel}>Admins</Text>
                 </View>
-            </View>
-
-            <View style={styles.infoBox}>
-                <Ionicons name="information-circle" size={24} color="#2196F3" />
-                <Text style={styles.infoText}>
-                    Đang sử dụng Mock Data để test. Khi connect Firebase thành công, 
-                    chỉ cần thay đổi import trong code là dùng được Firebase thật.
-                </Text>
-            </View>
-
-            <View style={[styles.infoBox, { backgroundColor: '#FFF3E0' }]}>
-                <Ionicons name="code-slash" size={24} color="#FF9800" />
-                <Text style={[styles.infoText, { color: '#E65100' }]}>
-                    Tips: Data sẽ reset khi reload app. Mọi thao tác thêm/sửa/xóa 
-                    đều hoạt động giống như Firebase thật!
-                </Text>
             </View>
         </View>
     );
@@ -555,7 +529,6 @@ const AdminScreen = ({ navigation }: any) => {
             {/* Header */}
             <View style={styles.topHeader}>
                 <Text style={styles.headerTitle}>Admin Panel</Text>
-                <Text style={styles.headerSubtitle}>Test Mode - Mock Data</Text>
             </View>
 
             {/* Tab Navigation */}
@@ -733,13 +706,24 @@ const AdminScreen = ({ navigation }: any) => {
                                         onChangeText={text => setFormData({ ...formData, name: text })}
                                     />
 
-                                    <Text style={styles.inputLabel}>Category *</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="e.g., Sedan, SUV, Luxury"
-                                        value={formData.category}
-                                        onChangeText={text => setFormData({ ...formData, category: text })}
-                                    />
+                                    <Text style={styles.inputLabel}>Hãng xe *</Text>
+                                    <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}> 
+                                        <Picker
+                                            selectedValue={formData.category}
+                                            onValueChange={value => setFormData({ ...formData, category: value })}
+                                        >
+                                            <Picker.Item label="Chọn hãng xe" value="" />
+                                            <Picker.Item label="VinFast" value="VinFast" />
+                                            <Picker.Item label="Toyota" value="Toyota" />
+                                            <Picker.Item label="Hyundai" value="Hyundai" />
+                                            <Picker.Item label="Kia" value="Kia" />
+                                            <Picker.Item label="Mazda" value="Mazda" />
+                                            <Picker.Item label="Honda" value="Honda" />
+                                            <Picker.Item label="Mercedes" value="Mercedes" />
+                                            <Picker.Item label="BMW" value="BMW" />
+                                            <Picker.Item label="Ford" value="Ford" />
+                                        </Picker>
+                                    </View>
 
                                     <Text style={styles.inputLabel}>Price (USD) *</Text>
                                     <TextInput
