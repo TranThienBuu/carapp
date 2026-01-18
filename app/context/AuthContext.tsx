@@ -1,8 +1,30 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp, getApps } from 'firebase/app';
+
+// Firebase config (dùng config của bạn, hoặc import từ file config)
+const firebaseConfig = {
+  apiKey: "AIzaSyBv75OD8GOFvHnG-1YU1y3OqcQxLr5S_-Y",
+  authDomain: "carapp-eb690.firebaseapp.com",
+  databaseURL: "https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "carapp-eb690",
+  storageBucket: "carapp-eb690.appspot.com",
+  messagingSenderId: "465301224798",
+  appId: "1:465301224798:web:9e051408992089168923cf",
+  measurementId: "G-H8WWWYVX1X"
+};
+
+
+let firebaseApp;
+if (getApps().length === 0) {
+  firebaseApp = initializeApp(firebaseConfig);
+} else {
+  firebaseApp = getApps()[0];
+}
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -17,12 +39,14 @@ interface User {
   email?: string | null;
 }
 
+
 interface AuthContextType {
   user: User | null;
   isLoaded: boolean;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInDemo: () => Promise<void>;
+  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
   isGoogleAuthEnabled: boolean;
 }
 
@@ -34,6 +58,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signInDemo: async () => {},
   isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
+  signInWithEmailPassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -131,17 +156,55 @@ const googleAuthConfig = {
     }
   };
 
-  // ===== SIGN IN =====
+
+  // ===== SIGN IN GOOGLE =====
   const signInWithGoogle = async () => {
     if (!ENABLE_GOOGLE_AUTH) throw new Error('Google Authentication is disabled.');
-
     try {
       console.log('🚀 Start Google login...');
       console.log('📦 Request details:', request);
       const result = await promptAsync();
       console.log('🟢 promptAsync result =', result);
+      // Nếu dùng Firebase Auth với Google, lấy accessToken và fetch profile như cũ
+      if (result?.type === 'success' && result.authentication?.accessToken) {
+        await getUserInfo(result.authentication.accessToken);
+      }
     } catch (error) {
       console.error('Google Sign-In Error:', error);
+      throw error;
+    }
+  };
+
+  // ===== SIGN IN EMAIL/PASSWORD =====
+  const signInWithEmailPassword = async (email: string, password: string) => {
+    try {
+      const apiKey = firebaseConfig.apiKey;
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            returnSecureToken: true,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const newUser: User = {
+        id: data.localId,
+        fullName: data.displayName || '',
+        imageUrl: null,
+        primaryEmailAddress: { emailAddress: data.email },
+        email: data.email,
+      };
+      setUser(newUser);
+      await AsyncStorage.setItem('user', JSON.stringify(newUser));
+    } catch (error) {
+      console.error('Firebase Email/Password Sign-In Error:', error);
       throw error;
     }
   };
@@ -161,6 +224,7 @@ const googleAuthConfig = {
     await AsyncStorage.setItem('user', JSON.stringify(demoUser));
   };
 
+
   // ===== SIGN OUT =====
   const signOut = async () => {
     setUser(null);
@@ -175,6 +239,7 @@ const googleAuthConfig = {
         signOut,
         signInWithGoogle,
         signInDemo,
+        signInWithEmailPassword,
         isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
       }}
     >
