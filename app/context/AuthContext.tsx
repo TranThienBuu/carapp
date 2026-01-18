@@ -37,12 +37,14 @@ interface User {
   imageUrl: string | null;
   primaryEmailAddress: { emailAddress: string | null };
   email?: string | null;
+  isAdmin?: boolean;
 }
 
 
 interface AuthContextType {
   user: User | null;
   isLoaded: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInDemo: () => Promise<void>;
@@ -54,6 +56,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoaded: false,
+  isAdmin: false,
   signOut: async () => {},
   signInWithGoogle: async () => {},
   signInDemo: async () => {},
@@ -63,14 +66,15 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 export const useUser = () => {
-  const { user, isLoaded } = useContext(AuthContext);
-  return { user, isLoaded };
+  const { user, isLoaded, isAdmin } = useContext(AuthContext);
+  return { user, isLoaded, isAdmin };
 };
 
 // ====== PROVIDER ======
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // ===== Redirect URI =====
   // Sửa đoạn này trong AuthContext.tsx
@@ -100,7 +104,11 @@ const googleAuthConfig = {
   const loadUser = async () => {
     try {
       const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setIsAdmin(parsedUser.email === 'sphong2161857@gmail.com');
+      }
     } catch (error) {
       console.error('Error loading user:', error);
     } finally {
@@ -149,8 +157,13 @@ const googleAuthConfig = {
         email: userInfo.email,
       };
 
+      newUser.isAdmin = newUser.email === 'sphong2161857@gmail.com';
       setUser(newUser);
+      setIsAdmin(newUser.isAdmin);
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      // Lấy idToken từ Google accessToken (phải dùng endpoint exchange)
+      // TODO: Nếu dùng Google Auth, cần lấy idToken từ Firebase bằng accessToken
+      // await AsyncStorage.setItem('idToken', idToken);
     } catch (error) {
       console.error('Error getting user info:', error);
     }
@@ -201,8 +214,13 @@ const googleAuthConfig = {
         primaryEmailAddress: { emailAddress: data.email },
         email: data.email,
       };
+      newUser.isAdmin = newUser.email === 'sphong2161857@gmail.com';
       setUser(newUser);
+      setIsAdmin(newUser.isAdmin);
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      if (data.idToken) {
+        await AsyncStorage.setItem('idToken', data.idToken);
+      }
     } catch (error) {
       console.error('Firebase Email/Password Sign-In Error:', error);
       throw error;
@@ -220,15 +238,20 @@ const googleAuthConfig = {
       email: 'demo@plantu.app',
     };
 
+    demoUser.isAdmin = demoUser.email === 'sphong2161857@gmail.com';
     setUser(demoUser);
+    setIsAdmin(demoUser.isAdmin);
     await AsyncStorage.setItem('user', JSON.stringify(demoUser));
+    await AsyncStorage.setItem('idToken', 'demo-token');
   };
 
 
   // ===== SIGN OUT =====
   const signOut = async () => {
     setUser(null);
+    setIsAdmin(false);
     await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem('idToken');
   };
 
   return (
@@ -236,6 +259,7 @@ const googleAuthConfig = {
       value={{
         user,
         isLoaded,
+        isAdmin,
         signOut,
         signInWithGoogle,
         signInDemo,

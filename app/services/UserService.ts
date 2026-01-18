@@ -1,5 +1,4 @@
-import { getDatabase, ref, push, set, get, update, remove } from 'firebase/database';
-import { app } from '../../firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface User {
     id: string;
@@ -11,23 +10,21 @@ export interface User {
     phone?: string;
 }
 
+
 class UserService {
-    private db = getDatabase(app);
 
     // Lấy tất cả users
     async getUsers(): Promise<User[]> {
         try {
-            const usersRef = ref(this.db, 'users');
-            const snapshot = await get(usersRef);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                return Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-            }
-            return [];
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/users.json?auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return [];
+            return Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
         } catch (error) {
             console.error('Error getting users:', error);
             throw error;
@@ -37,16 +34,19 @@ class UserService {
     // Thêm user mới
     async addUser(user: Omit<User, 'id' | 'createdAt'>): Promise<string> {
         try {
-            const usersRef = ref(this.db, 'users');
-            const newUserRef = push(usersRef);
-            
+            const idToken = await AsyncStorage.getItem('idToken');
             const userData = {
                 ...user,
                 createdAt: new Date().toISOString(),
             };
-
-            await set(newUserRef, userData);
-            return newUserRef.key || '';
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/users.json?auth=' + idToken, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData),
+            });
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            return data.name; // Firebase trả về key mới ở trường 'name'
         } catch (error) {
             console.error('Error adding user:', error);
             throw error;
@@ -56,8 +56,13 @@ class UserService {
     // Cập nhật user
     async updateUser(userId: string, updates: Partial<User>): Promise<void> {
         try {
-            const userRef = ref(this.db, `users/${userId}`);
-            await update(userRef, updates);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/users/${userId}.json?auth=${idToken}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error updating user:', error);
             throw error;
@@ -67,8 +72,11 @@ class UserService {
     // Xóa user
     async deleteUser(userId: string): Promise<void> {
         try {
-            const userRef = ref(this.db, `users/${userId}`);
-            await remove(userRef);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/users/${userId}.json?auth=${idToken}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error deleting user:', error);
             throw error;
@@ -78,16 +86,15 @@ class UserService {
     // Lấy user theo ID
     async getUserById(userId: string): Promise<User | null> {
         try {
-            const userRef = ref(this.db, `users/${userId}`);
-            const snapshot = await get(userRef);
-            
-            if (snapshot.exists()) {
-                return {
-                    id: userId,
-                    ...snapshot.val()
-                };
-            }
-            return null;
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/users/${userId}.json?auth=${idToken}`);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return null;
+            return {
+                id: userId,
+                ...data
+            };
         } catch (error) {
             console.error('Error getting user by id:', error);
             throw error;

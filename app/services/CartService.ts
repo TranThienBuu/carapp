@@ -1,5 +1,4 @@
-import { getDatabase, ref, push, set, get, update, remove, onValue } from 'firebase/database';
-import { app } from '../../firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface CartItem {
     id: string;
@@ -12,75 +11,53 @@ export interface CartItem {
     userId: string;
 }
 
+
 class CartService {
-    private db = getDatabase(app);
 
     // Lấy tất cả items trong giỏ hàng của user
     async getCartItems(userId: string): Promise<CartItem[]> {
         try {
-            console.log('🔍 CartService.getCartItems - userId:', userId);
-            const cartPath = `carts/${userId}`;
-            console.log('🔍 CartService.getCartItems - path:', cartPath);
-            
-            const cartRef = ref(this.db, cartPath);
-            console.log('📡 CartService: Đang gọi Firebase get()...');
-            const snapshot = await get(cartRef);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                console.log('✅ CartService: Dữ liệu giỏ hàng:', data);
-                return Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-            }
-            console.log('ℹ️ CartService: Giỏ hàng trống');
-            return [];
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/' + userId + '.json?auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return [];
+            return Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
         } catch (error) {
             console.error('❌ CartService.getCartItems error:', error);
-            console.error('❌ Error details:', JSON.stringify(error, null, 2));
             throw error;
         }
     }
 
-    // Lắng nghe thay đổi realtime của giỏ hàng
-    onCartChange(userId: string, callback: (items: CartItem[]) => void) {
-        const cartRef = ref(this.db, `carts/${userId}`);
-        return onValue(cartRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const items = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                callback(items);
-            } else {
-                callback([]);
-            }
-        });
-    }
 
     // Thêm sản phẩm vào giỏ hàng
     async addToCart(userId: string, item: Omit<CartItem, 'id' | 'userId'>): Promise<string> {
         try {
+            const idToken = await AsyncStorage.getItem('idToken');
             // Kiểm tra xem sản phẩm đã có trong giỏ chưa
             const existingItems = await this.getCartItems(userId);
             const existingItem = existingItems.find(i => i.productId === item.productId);
-
             if (existingItem) {
                 // Nếu đã có, cập nhật số lượng
                 await this.updateCartItemQuantity(userId, existingItem.id, existingItem.quantity + item.quantity);
                 return existingItem.id;
             } else {
                 // Nếu chưa có, thêm mới
-                const cartRef = ref(this.db, `carts/${userId}`);
-                const newItemRef = push(cartRef);
-                await set(newItemRef, {
-                    ...item,
-                    userId,
-                    addedAt: new Date().toISOString()
+                const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/' + userId + '.json?auth=' + idToken, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...item,
+                        userId,
+                        addedAt: new Date().toISOString()
+                    }),
                 });
-                return newItemRef.key || '';
+                if (!res.ok) throw new Error('Permission denied');
+                const data = await res.json();
+                return data.name; // Firebase trả về key mới ở trường 'name'
             }
         } catch (error) {
             console.error('Error adding to cart:', error);
@@ -95,9 +72,13 @@ class CartService {
                 await this.deleteCartItem(userId, itemId);
                 return;
             }
-
-            const itemRef = ref(this.db, `carts/${userId}/${itemId}`);
-            await update(itemRef, { quantity });
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/${userId}/${itemId}.json?auth=${idToken}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity }),
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error updating cart item quantity:', error);
             throw error;
@@ -107,8 +88,11 @@ class CartService {
     // Xóa một sản phẩm khỏi giỏ hàng
     async deleteCartItem(userId: string, itemId: string): Promise<void> {
         try {
-            const itemRef = ref(this.db, `carts/${userId}/${itemId}`);
-            await remove(itemRef);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/${userId}/${itemId}.json?auth=${idToken}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error deleting cart item:', error);
             throw error;
@@ -118,8 +102,11 @@ class CartService {
     // Xóa toàn bộ giỏ hàng
     async clearCart(userId: string): Promise<void> {
         try {
-            const cartRef = ref(this.db, `carts/${userId}`);
-            await remove(cartRef);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/${userId}.json?auth=${idToken}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error clearing cart:', error);
             throw error;

@@ -20,19 +20,6 @@ const CartScreen = () => {
         if (user?.id) {
             console.log('✅ User ID tồn tại, đang load giỏ hàng...');
             loadCartItems();
-            
-            // Lắng nghe thay đổi realtime của giỏ hàng
-            const unsubscribe = cartService.onCartChange(user.id, (items) => {
-                console.log('📦 Giỏ hàng realtime update:', items.length, 'items');
-                setCartItems(items);
-            });
-
-            return () => {
-                console.log('🧹 Cleanup: Unsubscribe cart listener');
-                if (unsubscribe) {
-                    unsubscribe();
-                }
-            };
         } else {
             console.log('❌ Không có User ID, không thể load giỏ hàng');
             setCartItems([]);

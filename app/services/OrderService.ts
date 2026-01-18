@@ -1,5 +1,4 @@
-import { getDatabase, ref, push, set, get, query, orderByChild, equalTo, update } from 'firebase/database';
-import { app } from '../../firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartItem } from './CartService';
 
 export interface Order {
@@ -25,33 +24,39 @@ export interface Order {
     };
 }
 
+
 class OrderService {
-    private db = getDatabase(app);
 
     // Tạo đơn hàng mới
     async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
         try {
-            const ordersRef = ref(this.db, 'orders');
-            const newOrderRef = push(ordersRef);
-            
-            const order: Omit<Order, 'id'> = {
+            const idToken = await AsyncStorage.getItem('idToken');
+            const order = {
                 ...orderData,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
-
-            await set(newOrderRef, order);
-            
-            // Lưu vào danh sách đơn hàng của user
-            const userOrderRef = ref(this.db, `userOrders/${orderData.userId}/${newOrderRef.key}`);
-            await set(userOrderRef, {
-                orderId: orderData.orderId,
-                total: orderData.total,
-                status: orderData.status,
-                createdAt: order.createdAt
+            // Tạo đơn hàng
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?auth=' + idToken, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(order),
             });
-
-            return newOrderRef.key || '';
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            const orderKey = data.name;
+            // Lưu vào danh sách đơn hàng của user
+            await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/userOrders/${orderData.userId}/${orderKey}.json?auth=${idToken}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: orderData.orderId,
+                    total: orderData.total,
+                    status: orderData.status,
+                    createdAt: order.createdAt
+                }),
+            });
+            return orderKey;
         } catch (error) {
             console.error('Error creating order:', error);
             throw error;
@@ -61,23 +66,16 @@ class OrderService {
     // Lấy tất cả đơn hàng của một user
     async getUserOrders(userId: string): Promise<Order[]> {
         try {
-            const ordersRef = ref(this.db, 'orders');
-            const userOrdersQuery = query(ordersRef, orderByChild('userId'), equalTo(userId));
-            const snapshot = await get(userOrdersQuery);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const orders = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                
-                // Sắp xếp theo thời gian tạo mới nhất
-                return orders.sort((a, b) => 
-                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                );
-            }
-            return [];
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?orderBy="userId"&equalTo="' + userId + '"&auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return [];
+            const orders = Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
+            return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (error) {
             console.error('Error getting user orders:', error);
             throw error;
@@ -87,16 +85,15 @@ class OrderService {
     // Lấy chi tiết một đơn hàng
     async getOrderById(orderId: string): Promise<Order | null> {
         try {
-            const orderRef = ref(this.db, `orders/${orderId}`);
-            const snapshot = await get(orderRef);
-            
-            if (snapshot.exists()) {
-                return {
-                    id: orderId,
-                    ...snapshot.val()
-                };
-            }
-            return null;
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return null;
+            return {
+                id: orderId,
+                ...data
+            };
         } catch (error) {
             console.error('Error getting order by id:', error);
             throw error;
@@ -106,19 +103,16 @@ class OrderService {
     // Lấy đơn hàng theo mã đơn hàng (orderId)
     async getOrderByOrderId(orderId: string): Promise<Order | null> {
         try {
-            const ordersRef = ref(this.db, 'orders');
-            const orderQuery = query(ordersRef, orderByChild('orderId'), equalTo(orderId));
-            const snapshot = await get(orderQuery);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const key = Object.keys(data)[0];
-                return {
-                    id: key,
-                    ...data[key]
-                };
-            }
-            return null;
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?orderBy="orderId"&equalTo="' + orderId + '"&auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return null;
+            const key = Object.keys(data)[0];
+            return {
+                id: key,
+                ...data[key]
+            };
         } catch (error) {
             console.error('Error getting order by orderId:', error);
             throw error;
@@ -132,24 +126,33 @@ class OrderService {
         paymentInfo?: Order['paymentInfo']
     ): Promise<void> {
         try {
-            const orderRef = ref(this.db, `orders/${orderId}`);
+            const idToken = await AsyncStorage.getItem('idToken');
             const updateData: any = {
                 status,
                 updatedAt: new Date().toISOString()
             };
-
             if (paymentInfo) {
                 updateData.paymentInfo = paymentInfo;
             }
-
-            await update(orderRef, updateData);
-            
-            // Cập nhật trong userOrders
-            const snapshot = await get(orderRef);
-            if (snapshot.exists()) {
-                const order = snapshot.val();
-                const userOrderRef = ref(this.db, `userOrders/${order.userId}/${orderId}`);
-                await update(userOrderRef, { status });
+            // Update order
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData),
+            });
+            if (!res.ok) throw new Error('Permission denied');
+            // Update userOrders status
+            // Lấy order để lấy userId
+            const orderRes = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`);
+            if (orderRes.ok) {
+                const order = await orderRes.json();
+                if (order && order.userId) {
+                    await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/userOrders/${order.userId}/${orderId}.json?auth=${idToken}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status }),
+                    });
+                }
             }
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -161,12 +164,15 @@ class OrderService {
     async cancelOrder(orderId: string, reason?: string): Promise<void> {
         try {
             await this.updateOrderStatus(orderId, 'cancelled');
-            
             if (reason) {
-                const orderRef = ref(this.db, `orders/${orderId}`);
-                await update(orderRef, { 
-                    cancelReason: reason,
-                    cancelledAt: new Date().toISOString()
+                const idToken = await AsyncStorage.getItem('idToken');
+                await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders/${orderId}.json?auth=${idToken}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cancelReason: reason,
+                        cancelledAt: new Date().toISOString()
+                    }),
                 });
             }
         } catch (error) {
@@ -178,22 +184,16 @@ class OrderService {
     // Lấy tất cả đơn hàng (dành cho admin)
     async getAllOrders(): Promise<Order[]> {
         try {
-            const ordersRef = ref(this.db, 'orders');
-            const snapshot = await get(ordersRef);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const orders = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                
-                // Sắp xếp theo thời gian tạo mới nhất
-                return orders.sort((a, b) => 
-                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                );
-            }
-            return [];
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json?auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return [];
+            const orders = Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
+            return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (error) {
             console.error('Error getting all orders:', error);
             throw error;
@@ -214,7 +214,6 @@ class OrderService {
             const orders = userId 
                 ? await this.getUserOrders(userId)
                 : await this.getAllOrders();
-
             return {
                 total: orders.length,
                 pending: orders.filter(o => o.status === 'pending').length,
@@ -236,7 +235,6 @@ class OrderService {
             const orders = userId 
                 ? await this.getUserOrders(userId)
                 : await this.getAllOrders();
-            
             return orders
                 .filter(o => o.status !== 'cancelled')
                 .reduce((total, order) => total + order.total, 0);

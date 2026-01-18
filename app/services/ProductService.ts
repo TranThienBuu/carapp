@@ -1,5 +1,4 @@
-import { getDatabase, ref, push, set, get, update, remove, query, orderByChild } from 'firebase/database';
-import { app } from '../../firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Product {
     id: string;
@@ -13,23 +12,20 @@ export interface Product {
     image?: string;
 }
 
-class ProductService {
-    private db = getDatabase(app);
 
+class ProductService {
     // Lấy tất cả sản phẩm
     async getProducts(): Promise<Product[]> {
         try {
-            const productsRef = ref(this.db, 'products');
-            const snapshot = await get(productsRef);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                return Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-            }
-            return [];
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products.json?auth=' + idToken);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return [];
+            return Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
         } catch (error) {
             console.error('Error getting products:', error);
             throw error;
@@ -39,16 +35,19 @@ class ProductService {
     // Thêm sản phẩm mới
     async addProduct(product: Omit<Product, 'id' | 'createdAt'>): Promise<string> {
         try {
-            const productsRef = ref(this.db, 'products');
-            const newProductRef = push(productsRef);
-            
+            const idToken = await AsyncStorage.getItem('idToken');
             const productData = {
                 ...product,
                 createdAt: new Date().toISOString(),
             };
-
-            await set(newProductRef, productData);
-            return newProductRef.key || '';
+            const res = await fetch('https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products.json?auth=' + idToken, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData),
+            });
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            return data.name; // Firebase trả về key mới ở trường 'name'
         } catch (error) {
             console.error('Error adding product:', error);
             throw error;
@@ -58,8 +57,13 @@ class ProductService {
     // Cập nhật sản phẩm
     async updateProduct(productId: string, updates: Partial<Product>): Promise<void> {
         try {
-            const productRef = ref(this.db, `products/${productId}`);
-            await update(productRef, updates);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products/${productId}.json?auth=${idToken}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error updating product:', error);
             throw error;
@@ -69,8 +73,11 @@ class ProductService {
     // Xóa sản phẩm
     async deleteProduct(productId: string): Promise<void> {
         try {
-            const productRef = ref(this.db, `products/${productId}`);
-            await remove(productRef);
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products/${productId}.json?auth=${idToken}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error('Permission denied');
         } catch (error) {
             console.error('Error deleting product:', error);
             throw error;
@@ -80,16 +87,15 @@ class ProductService {
     // Lấy sản phẩm theo ID
     async getProductById(productId: string): Promise<Product | null> {
         try {
-            const productRef = ref(this.db, `products/${productId}`);
-            const snapshot = await get(productRef);
-            
-            if (snapshot.exists()) {
-                return {
-                    id: productId,
-                    ...snapshot.val()
-                };
-            }
-            return null;
+            const idToken = await AsyncStorage.getItem('idToken');
+            const res = await fetch(`https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/products/${productId}.json?auth=${idToken}`);
+            if (!res.ok) throw new Error('Permission denied');
+            const data = await res.json();
+            if (!data) return null;
+            return {
+                id: productId,
+                ...data
+            };
         } catch (error) {
             console.error('Error getting product by id:', error);
             throw error;
