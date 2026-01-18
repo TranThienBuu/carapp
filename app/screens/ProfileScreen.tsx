@@ -18,14 +18,7 @@ export default function ProfileScreen() {
     }
 
     const menuList = [
-        {
-            id: 1,
-            name: "Sản phẩm của tôi",
-            icon: "car-sport",
-            path: "my-products",
-            color: "#3B82F6",
-            bgColor: "#EFF6FF"
-        },
+        // ...Ẩn mục Sản phẩm của tôi
         {
             id: 2,
             name: "Đơn hàng của tôi",
@@ -60,13 +53,13 @@ export default function ProfileScreen() {
     ]
 
     const statsData = [
-        { label: "Sản phẩm", value: "12", icon: "car" },
         { label: "Đơn hàng", value: "5", icon: "receipt" },
-        { label: "Đánh giá", value: "4.8", icon: "star" }
+        { label: "Đánh giá", value: "4.8", icon: "star" },
+        // Decor lại: thêm màu gradient cho card
     ]
 
     return(
-        <ScrollView className="flex-1 bg-gray-50">
+        <ScrollView className="flex-1 bg-gray-100">
             {/* Header with Gradient */}
             <View className="bg-gradient-to-b from-blue-500 to-blue-600 pb-8 pt-12 rounded-b-3xl shadow-lg">
                 <View className="items-center px-5">
@@ -96,13 +89,19 @@ export default function ProfileScreen() {
             {/* Stats Cards */}
             <View className="flex-row justify-around px-5 -mt-8 mb-6">
                 {statsData.map((stat, index) => (
-                    <View key={index} className="bg-white rounded-2xl p-4 items-center shadow-md flex-1 mx-2">
-                        <View className="bg-blue-50 rounded-full p-3 mb-2">
-                            <Ionicons name={stat.icon as any} size={24} color="#3B82F6" />
+                    <LinearGradient
+                        key={index}
+                        colors={["#e0e7ff", "#fff"]}
+                        start={{x: 0, y: 0}}
+                        end={{x: 1, y: 1}}
+                        style={{ borderRadius: 18, padding: 18, alignItems: 'center', flex: 1, marginHorizontal: 8, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4 }}
+                    >
+                        <View style={{ backgroundColor: '#f3f4f6', borderRadius: 999, padding: 10, marginBottom: 8 }}>
+                            <Ionicons name={stat.icon as any} size={28} color="#6366f1" />
                         </View>
-                        <Text className="font-bold text-[20px] text-gray-800">{stat.value}</Text>
-                        <Text className="text-[12px] text-gray-500 mt-1">{stat.label}</Text>
-                    </View>
+                        <Text style={{ fontWeight: 'bold', fontSize: 22, color: '#1e293b' }}>{stat.value}</Text>
+                        <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{stat.label}</Text>
+                    </LinearGradient>
                 ))}
             </View>
 

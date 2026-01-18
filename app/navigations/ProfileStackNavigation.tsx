@@ -3,7 +3,7 @@ import {Text, View} from "react-native";
 import {createStackNavigator} from "@react-navigation/stack";
 import ProfileScreen from "../screens/ProfileScreen";
 import ExploreScreen from "../screens/ExploreScreen";
-import MyProductsScreen from "../screens/MyProducts";
+// ...existing code...
 import ProductDetail from "../screens/ProductDetail";
 import OrdersScreen from "../screens/OrdersScreen";
 
@@ -14,19 +14,7 @@ export default function ProfileStackNavigation() {
 
     return(
         <Stack.Navigator>
-
-            <Stack.Screen name="profile" component={ProfileScreen}
-
-            />
-            <Stack.Screen name="my-products" component={MyProductsScreen}
-                          options={{
-                              headerStyle:{
-                                  backgroundColor:"#006266",
-                              },
-                              headerTintColor:"#fff",
-                              headerTitle:"Sản phẩm của tôi"}}
-            />
-
+            <Stack.Screen name="profile" component={ProfileScreen} />
             <Stack.Screen name="orders" component={OrdersScreen}
                           options={{
                               headerStyle:{
