@@ -6,6 +6,7 @@ import ExploreScreen from "../screens/ExploreScreen";
 // ...existing code...
 import ProductDetail from "../screens/ProductDetail";
 import OrdersScreen from "../screens/OrdersScreen";
+import OrderDetailScreen from "../screens/OrderDetailScreen";
 
 
 const Stack = createStackNavigator();
@@ -22,6 +23,18 @@ export default function ProfileStackNavigation() {
                               },
                               headerTintColor:"#fff",
                               headerTitle:"Đơn hàng của tôi"}}
+            />
+
+            <Stack.Screen
+                name="order-detail"
+                component={OrderDetailScreen}
+                options={{
+                    headerStyle: {
+                        backgroundColor: "#006266",
+                    },
+                    headerTintColor: "#fff",
+                    headerTitle: "Chi tiết đơn hàng",
+                }}
             />
 
             <Stack.Screen name="product-detail" component={ProductDetail}

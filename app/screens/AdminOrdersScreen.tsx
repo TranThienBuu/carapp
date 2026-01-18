@@ -10,6 +10,7 @@ import {
     RefreshControl,
     Modal,
     ScrollView,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { orderService, Order } from '../services/OrderService';
@@ -79,6 +80,31 @@ const AdminOrdersScreen = ({ navigation }: any) => {
         }
     };
 
+    const handleUpdatePaymentStatus = async (
+        orderId: string,
+        paymentStatus: NonNullable<Order['paymentStatus']>
+    ) => {
+        try {
+            await orderService.updatePaymentStatus(
+                orderId,
+                paymentStatus,
+                paymentStatus === 'paid'
+                    ? {
+                        transactionId: selectedOrder?.paymentInfo?.transactionId || `MANUAL-${Date.now()}`,
+                        paidAt: selectedOrder?.paymentInfo?.paidAt || new Date().toISOString(),
+                    }
+                    : undefined
+            );
+
+            Alert.alert('Thành công', 'Đã cập nhật trạng thái thanh toán');
+            await loadOrders();
+            setSelectedOrder((prev) => (prev ? { ...prev, paymentStatus } : prev));
+        } catch (error) {
+            console.error('Error updating payment status:', error);
+            Alert.alert('Lỗi', 'Không thể cập nhật trạng thái thanh toán');
+        }
+    };
+
     const openOrderDetail = (order: Order) => {
         setSelectedOrder(order);
         setModalVisible(true);
@@ -100,6 +126,18 @@ const AdminOrdersScreen = ({ navigation }: any) => {
             case 'VNPay': return 'VNPay';
             case 'MoMo': return 'MoMo';
             default: return method;
+        }
+    };
+
+    const getPaymentStatusText = (paymentStatus?: Order['paymentStatus']) => {
+        switch (paymentStatus) {
+            case 'paid':
+                return 'Đã thanh toán';
+            case 'refunded':
+                return 'Đã hoàn tiền';
+            case 'unpaid':
+            default:
+                return 'Chưa thanh toán';
         }
     };
 
@@ -196,6 +234,15 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                     {item.total.toLocaleString('vi-VN')}đ
                 </Text>
             </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                <Text style={{ color: '#666' }}>
+                    Thanh toán: {getPaymentStatusText(item.paymentStatus)}
+                </Text>
+                <Text style={{ color: '#666' }}>
+                    {getPaymentMethodText(item.paymentMethod)}
+                </Text>
+            </View>
         </TouchableOpacity>
     );
 
@@ -265,9 +312,15 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                             <View style={styles.detailSection}>
                                 <Text style={styles.sectionTitle}>Sản phẩm</Text>
                                 {selectedOrder.items.map((item, index) => (
-                                    <View key={index} style={styles.productRow}>
-                                        <Text style={styles.productName}>{item.name}</Text>
-                                        <Text style={styles.productQuantity}>x{item.quantity}</Text>
+                                    <View key={index} style={[styles.productRow, { alignItems: 'center' }]}>
+                                        <Image
+                                            source={{ uri: item.image || 'https://via.placeholder.com/80' }}
+                                            style={{ width: 46, height: 46, borderRadius: 8, marginRight: 10, backgroundColor: '#f1f5f9' }}
+                                        />
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.productName}>{item.name}</Text>
+                                            <Text style={styles.productQuantity}>SL: {item.quantity}</Text>
+                                        </View>
                                         <Text style={styles.productPrice}>
                                             {(item.price * item.quantity).toLocaleString('vi-VN')}đ
                                         </Text>
@@ -289,6 +342,10 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                                 <View style={styles.detailRow}>
                                     <Text style={styles.detailLabel}>Phương thức:</Text>
                                     <Text style={styles.detailValue}>{getPaymentMethodText(selectedOrder.paymentMethod)}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Trạng thái thanh toán:</Text>
+                                    <Text style={styles.detailValue}>{getPaymentStatusText(selectedOrder.paymentStatus)}</Text>
                                 </View>
                                 <View style={[styles.detailRow, styles.totalRow]}>
                                     <Text style={styles.totalLabel}>Tổng cộng:</Text>
@@ -318,6 +375,43 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                                                             text: 'Xác nhận',
                                                             onPress: () => handleUpdateStatus(selectedOrder.id, option.value)
                                                         }
+                                                    ]
+                                                );
+                                            }}
+                                        >
+                                            <Text style={styles.statusButtonText}>{option.label}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            {/* Update Payment Status */}
+                            <View style={styles.detailSection}>
+                                <Text style={styles.sectionTitle}>Cập nhật thanh toán</Text>
+                                <View style={styles.statusButtons}>
+                                    {([
+                                        { value: 'unpaid', label: 'Chưa thanh toán', color: '#64748b' },
+                                        { value: 'paid', label: 'Đã thanh toán', color: '#16a34a' },
+                                        { value: 'refunded', label: 'Hoàn tiền', color: '#7c3aed' },
+                                    ] as const).map((option) => (
+                                        <TouchableOpacity
+                                            key={option.value}
+                                            style={[
+                                                styles.statusButton,
+                                                { backgroundColor: option.color },
+                                                selectedOrder.paymentStatus === option.value && styles.statusButtonActive,
+                                            ]}
+                                            onPress={() => {
+                                                Alert.alert(
+                                                    'Xác nhận',
+                                                    `Cập nhật thanh toán thành "${option.label}"?`,
+                                                    [
+                                                        { text: 'Hủy', style: 'cancel' },
+                                                        {
+                                                            text: 'Xác nhận',
+                                                            onPress: () =>
+                                                                handleUpdatePaymentStatus(selectedOrder.id, option.value),
+                                                        },
                                                     ]
                                                 );
                                             }}

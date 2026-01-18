@@ -4,6 +4,8 @@ import { WebView } from 'react-native-webview';
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 import { mockDataService } from '../services/MockDataService';
+import { orderService } from '../services/OrderService';
+import { cartService } from '../services/CartService';
 
 interface PaymentScreenProps {
   route?: any;
@@ -20,6 +22,8 @@ export default function PaymentScreen({ route, navigation }: PaymentScreenProps)
   const productTitle = route?.params?.productTitle || 'Đơn hàng';
   const orderId = route?.params?.orderId || `DH${new Date().getTime()}`;
   const orderData = route?.params?.orderData || {};
+  const orderKey = route?.params?.orderKey;
+  const userId = route?.params?.userId;
 
   // QUAN TRỌNG: Thay đổi IP này thành IP máy tính chạy Spring Boot của bạn
   // Nếu dùng emulator Android: http://10.0.2.2:8080
@@ -204,15 +208,30 @@ export default function PaymentScreen({ route, navigation }: PaymentScreenProps)
   // Hàm lưu/cập nhật đơn hàng trong mock data
   const updateOrderStatus = async (status: 'paid' | 'pending') => {
     try {
-      // Tìm đơn hàng theo orderId và cập nhật trạng thái
+      // Nếu có orderKey (order đã lưu ở Realtime DB) thì update trực tiếp
+      if (orderKey) {
+        if (status === 'paid') {
+          await orderService.updatePaymentStatus(orderKey, 'paid', {
+            transactionId: `VNPAY-${Date.now()}`,
+            paidAt: new Date().toISOString(),
+          });
+          if (userId) {
+            await cartService.clearCart(userId);
+          }
+        } else {
+          await orderService.updatePaymentStatus(orderKey, 'unpaid');
+        }
+
+        console.log(`✅ Đã cập nhật paymentStatus đơn hàng ${orderKey} thành ${status}`);
+        return;
+      }
+
+      // Fallback: chế độ demo cũ (mock data)
       const orders = await mockDataService.getOrders();
       const order = orders.find(o => o.orderId === orderId);
-      
       if (order) {
         await mockDataService.updateOrderStatus(order.id, status);
         console.log(`✅ Đã cập nhật trạng thái đơn hàng ${orderId} thành ${status}`);
-        
-        // Xóa giỏ hàng sau khi thanh toán thành công
         if (status === 'paid') {
           await mockDataService.clearCart();
         }
@@ -244,9 +263,9 @@ export default function PaymentScreen({ route, navigation }: PaymentScreenProps)
             {
               text: 'OK',
               onPress: () => {
-                // Quay về màn hình trước hoặc Home
+                // Sau thanh toán thành công: chuyển sang Đơn hàng của tôi
                 if (navigation) {
-                  navigation.goBack();
+                  navigation.navigate('profile-nav', { screen: 'orders' });
                 }
               }
             }
