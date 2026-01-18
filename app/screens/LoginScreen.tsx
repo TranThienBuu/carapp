@@ -2,13 +2,15 @@
 import React, { useState } from "react";
 import { ImageBackground, Text, TouchableOpacity, View, StyleSheet, Alert, ActivityIndicator, TextInput } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { useNavigation } from "@react-navigation/native";
 import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
 
 
 const LoginScreen = () => {
-    const { signInWithGoogle, signInDemo, isGoogleAuthEnabled, signInWithEmailPassword } = useAuth();
+    const navigation = useNavigation<any>();
+    const { signInWithGoogle, isGoogleAuthEnabled, signInWithEmailPassword } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -21,7 +23,15 @@ const LoginScreen = () => {
             setIsLoading(true);
             await signInWithEmailPassword(email, password);
         } catch (err: any) {
-            Alert.alert("Lỗi đăng nhập", err.message || "Sai email hoặc mật khẩu.");
+            const msg = err?.message || "Sai email hoặc mật khẩu.";
+            if (msg === 'EMAIL_NOT_VERIFIED') {
+                Alert.alert(
+                    "Chưa xác thực email",
+                    "Email của bạn chưa được xác thực. Vui lòng kiểm tra hộp thư (và spam) để bấm link kích hoạt. Hệ thống đã cố gắng gửi lại email xác thực.",
+                );
+            } else {
+                Alert.alert("Lỗi đăng nhập", msg);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -45,22 +55,6 @@ const LoginScreen = () => {
             Alert.alert(
                 "Lỗi đăng nhập",
                 err.message || "Không thể đăng nhập với Google.",
-                [{ text: "OK" }]
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleDemoLogin = async () => {
-        try {
-            setIsLoading(true);
-            await signInDemo();
-        } catch (err: any) {
-            console.error("Demo login error", err);
-            Alert.alert(
-                "Lỗi",
-                "Không thể đăng nhập Demo Mode. Vui lòng thử lại.",
                 [{ text: "OK" }]
             );
         } finally {
@@ -111,26 +105,27 @@ const LoginScreen = () => {
                                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Đăng nhập</Text>
                             )}
                         </TouchableOpacity>
-                    </View>
 
-                    {/* Demo Login - Primary */}
-                    <TouchableOpacity
-                        className="w-full max-w-xs p-4 bg-white rounded-xl shadow-lg"
-                        onPress={handleDemoLogin}
-                        disabled={isLoading}
-                        style={styles.primaryButton}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color="#16a34a" />
-                        ) : (
-                            <View className="flex-row items-center justify-center">
-                                <Text className="text-[20px] mr-2">🚀</Text>
-                                <Text className="text-green-600 text-[18px] font-bold">
-                                    Vào App Ngay
-                                </Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('forgot-password')}
+                            disabled={isLoading}
+                            style={{ alignItems: 'center', marginTop: 10 }}
+                        >
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>
+                                Quên mật khẩu?
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('register')}
+                            disabled={isLoading}
+                            style={{ alignItems: 'center', marginTop: 10 }}
+                        >
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>
+                                Chưa có tài khoản? Đăng ký
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* Google Login - Secondary (if enabled) */}
                     {isGoogleAuthEnabled && (
@@ -149,9 +144,6 @@ const LoginScreen = () => {
 
                     {/* Info Message */}
                     <View className="mt-10 px-6">
-                        <Text className="text-white/80 text-[12px] text-center">
-                            ✨ Không cần đăng ký - Bắt đầu ngay lập tức
-                        </Text>
                         {!isGoogleAuthEnabled && (
                             <Text className="text-white/60 text-[11px] text-center mt-2">
                                 (Google Sign-In tạm thời không khả dụng)

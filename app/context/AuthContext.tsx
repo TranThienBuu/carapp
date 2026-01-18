@@ -49,6 +49,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInDemo: () => Promise<void>;
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  signUpWithEmailPassword: (email: string, password: string, fullName?: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
   isGoogleAuthEnabled: boolean;
 }
 
@@ -62,6 +64,8 @@ const AuthContext = createContext<AuthContextType>({
   signInDemo: async () => {},
   isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
   signInWithEmailPassword: async () => {},
+  signUpWithEmailPassword: async () => {},
+  sendPasswordResetEmail: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -228,6 +232,40 @@ const googleAuthConfig = {
       const data = await res.json();
       if (data.error) throw new Error(data.error.message);
 
+      // Check verified email (recommended when using email/password)
+      if (data.idToken) {
+        const lookupRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: data.idToken }),
+          }
+        );
+        const lookupData = await lookupRes.json();
+        const emailVerified = !!lookupData?.users?.[0]?.emailVerified;
+        if (!emailVerified) {
+          // Best-effort resend verification email
+          try {
+            await fetch(
+              `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  requestType: 'VERIFY_EMAIL',
+                  idToken: data.idToken,
+                }),
+              }
+            );
+          } catch (e) {
+            // ignore resend failures
+          }
+
+          throw new Error('EMAIL_NOT_VERIFIED');
+        }
+      }
+
       const newUser: User = {
         id: data.localId,
         fullName: data.displayName || '',
@@ -244,6 +282,109 @@ const googleAuthConfig = {
       }
     } catch (error) {
       console.error('Firebase Email/Password Sign-In Error:', error);
+      throw error;
+    }
+  };
+
+  // ===== SIGN UP EMAIL/PASSWORD =====
+  const signUpWithEmailPassword = async (
+    email: string,
+    password: string,
+    fullName?: string
+  ) => {
+    try {
+      const apiKey = firebaseConfig.apiKey;
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            returnSecureToken: true,
+          }),
+        }
+      );
+      let data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const displayName = (fullName || '').trim();
+      if (displayName && data.idToken) {
+        const updateRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              idToken: data.idToken,
+              displayName,
+              returnSecureToken: true,
+            }),
+          }
+        );
+        const updateData = await updateRes.json();
+        if (!updateData.error) {
+          data = { ...data, ...updateData };
+        }
+      }
+
+      // Send verification email
+      if (data.idToken) {
+        const verifyRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              requestType: 'VERIFY_EMAIL',
+              idToken: data.idToken,
+            }),
+          }
+        );
+        const verifyData = await verifyRes.json();
+        if (verifyData.error) throw new Error(verifyData.error.message);
+      }
+
+      const newUser: User = {
+        id: data.localId,
+        fullName: displayName || data.displayName || '',
+        imageUrl: null,
+        primaryEmailAddress: { emailAddress: data.email },
+        email: data.email,
+      };
+      newUser.isAdmin = newUser.email === 'sphong2161857@gmail.com';
+      setUser(newUser);
+      setIsAdmin(newUser.isAdmin);
+      await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      if (data.idToken) {
+        await AsyncStorage.setItem('idToken', data.idToken);
+      }
+    } catch (error) {
+      console.error('Firebase Email/Password Sign-Up Error:', error);
+      throw error;
+    }
+  };
+
+  // ===== PASSWORD RESET (EMAIL) =====
+  const sendPasswordResetEmail = async (email: string) => {
+    try {
+      const apiKey = firebaseConfig.apiKey;
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestType: 'PASSWORD_RESET',
+            email,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+    } catch (error) {
+      console.error('Firebase Password Reset Error:', error);
       throw error;
     }
   };
@@ -285,6 +426,8 @@ const googleAuthConfig = {
         signInWithGoogle,
         signInDemo,
         signInWithEmailPassword,
+        signUpWithEmailPassword,
+        sendPasswordResetEmail,
         isGoogleAuthEnabled: ENABLE_GOOGLE_AUTH,
       }}
     >

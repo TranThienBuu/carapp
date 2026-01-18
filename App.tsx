@@ -1,13 +1,11 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import LoginScreen from './app/screens/LoginScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Text, View} from 'react-native';
 import TabNavigation from "./app/navigations/TabNavigation";
-import ExploreScreen from "./app/screens/ExploreScreen";
-import ProfileScreen from "./app/screens/ProfileScreen";
 import {StatusBar} from "expo-status-bar";
 import { AuthProvider, useAuth } from './app/context/AuthContext';
+import AuthStackNavigation from './app/navigations/AuthStackNavigation';
 
 function AppContent() {
     const { user, isLoaded } = useAuth();
@@ -23,13 +21,9 @@ function AppContent() {
     return (
         <View className="flex-1 bg-white">
             <StatusBar style="auto"/>
-            {user ? (
-                <NavigationContainer>
-                    <TabNavigation/>
-                </NavigationContainer>
-            ) : (
-                <LoginScreen />
-            )}
+            <NavigationContainer>
+                {user ? <TabNavigation /> : <AuthStackNavigation />}
+            </NavigationContainer>
         </View>
     );
 }
