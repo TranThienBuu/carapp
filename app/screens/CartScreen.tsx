@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { cartService, CartItem } from '../services/CartService';
 import { useUser } from '../context/AuthContext';
+import { formatUSD } from '../utils/currency';
 
 const CartScreen = () => {
     const navigation = useNavigation<any>();
@@ -11,6 +12,7 @@ const CartScreen = () => {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+
 
     // Load cart items khi component mount
     useEffect(() => {
@@ -59,11 +61,13 @@ const CartScreen = () => {
         try {
             const item = cartItems.find(i => i.id === itemId);
             if (!item) return;
-            
-            await cartService.updateCartItemQuantity(user.id, itemId, item.quantity + 1);
-            // State sẽ tự động cập nhật qua realtime listener
+
+            const nextQuantity = item.quantity + 1;
+            setCartItems(prev => prev.map(ci => ci.id === itemId ? { ...ci, quantity: nextQuantity } : ci));
+            await cartService.updateCartItemQuantity(user.id, itemId, nextQuantity);
         } catch (error) {
             console.error('Error increasing quantity:', error);
+            await loadCartItems();
             Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
         }
     };
@@ -74,11 +78,13 @@ const CartScreen = () => {
         try {
             const item = cartItems.find(i => i.id === itemId);
             if (!item || item.quantity <= 1) return;
-            
-            await cartService.updateCartItemQuantity(user.id, itemId, item.quantity - 1);
-            // State sẽ tự động cập nhật qua realtime listener
+
+            const nextQuantity = item.quantity - 1;
+            setCartItems(prev => prev.map(ci => ci.id === itemId ? { ...ci, quantity: nextQuantity } : ci));
+            await cartService.updateCartItemQuantity(user.id, itemId, nextQuantity);
         } catch (error) {
             console.error('Error decreasing quantity:', error);
+            await loadCartItems();
             Alert.alert('Lỗi', 'Không thể cập nhật số lượng');
         }
     };
@@ -96,11 +102,12 @@ const CartScreen = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
+                            setCartItems(prev => prev.filter(ci => ci.id !== itemId));
                             await cartService.deleteCartItem(user.id, itemId);
-                            // State sẽ tự động cập nhật qua realtime listener
                             Alert.alert('Thành công', 'Đã xóa sản phẩm khỏi giỏ hàng');
                         } catch (error) {
                             console.error('Error deleting item:', error);
+                            await loadCartItems();
                             Alert.alert('Lỗi', 'Không thể xóa sản phẩm');
                         }
                     }
@@ -135,7 +142,7 @@ const CartScreen = () => {
                     {item.description}
                 </Text>
                 <Text style={styles.itemPrice}>
-                    {item.price.toLocaleString('vi-VN')}đ
+                    {formatUSD(item.price)}
                 </Text>
             </View>
             <View style={styles.itemActions}>
@@ -206,7 +213,7 @@ const CartScreen = () => {
                 <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>Tạm tính:</Text>
                     <Text style={styles.summaryValue}>
-                        {calculateSubtotal().toLocaleString('vi-VN')}đ
+                        {formatUSD(calculateSubtotal())}
                     </Text>
                 </View>
 

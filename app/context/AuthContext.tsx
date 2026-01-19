@@ -85,6 +85,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Sync user profile to Realtime Database so Admin can list all users
+  const upsertUserToRtdb = async (u: User, idToken?: string | null) => {
+    try {
+      if (!u?.id) return;
+      if (!idToken || idToken === 'demo-token') return;
+
+      const baseUrl = String(firebaseConfig.databaseURL || '').replace(/\/$/, '');
+      if (!baseUrl) return;
+
+      const url = `${baseUrl}/users/${u.id}.json?auth=${idToken}`;
+      const now = new Date().toISOString();
+      const email = u.email || u.primaryEmailAddress?.emailAddress || '';
+
+      let exists = false;
+      try {
+        const existingRes = await fetch(url);
+        if (existingRes.ok) {
+          const existing = await existingRes.json();
+          exists = !!existing;
+        }
+      } catch (e) {
+        // ignore lookup failures
+      }
+
+      const payload: any = {
+        name: u.fullName || '',
+        email,
+        role: u.isAdmin ? 'admin' : 'user',
+        imageUrl: u.imageUrl || '',
+        phone: u.phone || '',
+        updatedAt: now,
+        ...(exists ? {} : { createdAt: now }),
+      };
+
+      await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('RTDB user upsert error:', error);
+    }
+  };
+
   // ===== Redirect URI =====
   // Sửa đoạn này trong AuthContext.tsx
   // Ép redirectUri về dạng https://auth.expo.io/@phongpham2410/carapp
@@ -177,7 +221,8 @@ const googleAuthConfig = {
       console.log('🔑 Firebase signInWithIdp response:', firebaseData);
 
       const newUser: User = {
-        id: userInfo.id,
+        // Use Firebase Auth uid (localId) so it matches auth.uid in rules and DB paths
+        id: firebaseData.localId || userInfo.id,
         fullName: userInfo.name,
         imageUrl: userInfo.picture,
         primaryEmailAddress: { emailAddress: userInfo.email },
@@ -191,6 +236,7 @@ const googleAuthConfig = {
       if (firebaseData.idToken) {
         console.log('✅ Google login - idToken:', firebaseData.idToken);
         await AsyncStorage.setItem('idToken', firebaseData.idToken);
+        await upsertUserToRtdb(newUser, firebaseData.idToken);
       } else {
         console.log('❌ Google login - idToken NOT FOUND:', firebaseData);
       }
@@ -284,6 +330,7 @@ const googleAuthConfig = {
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
       if (data.idToken) {
         await AsyncStorage.setItem('idToken', data.idToken);
+        await upsertUserToRtdb(newUser, data.idToken);
       }
     } catch (error) {
       console.error('Firebase Email/Password Sign-In Error:', error);
@@ -364,6 +411,7 @@ const googleAuthConfig = {
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
       if (data.idToken) {
         await AsyncStorage.setItem('idToken', data.idToken);
+        await upsertUserToRtdb(newUser, data.idToken);
       }
     } catch (error) {
       console.error('Firebase Email/Password Sign-Up Error:', error);

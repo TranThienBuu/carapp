@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { orderService, Order } from '../services/OrderService';
 import { useUser } from '../context/AuthContext';
+import { formatUSD } from '../utils/currency';
 
 const OrdersScreen = ({ navigation }: any) => {
     const { user } = useUser();
@@ -161,7 +162,7 @@ const OrdersScreen = ({ navigation }: any) => {
                     </Text>
                 </View>
                 <Text style={styles.totalPrice}>
-                    {item.total.toLocaleString('vi-VN')}đ
+                    {formatUSD(item.total)}
                 </Text>
             </View>
 

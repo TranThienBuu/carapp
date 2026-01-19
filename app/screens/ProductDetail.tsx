@@ -99,11 +99,22 @@ export default function ProductDetail({ navigation }) {
         
         setLoading(true);
         try {
+            // product.price đôi khi là chuỗi dạng "20.000" hoặc "20,000" -> cần parse thành 20000
+            const parsePriceToNumber = (value: any): number => {
+                if (typeof value === 'number') return value;
+                const raw = String(value ?? '').trim();
+                if (!raw) return 0;
+                // Giữ chữ số, loại bỏ dấu phân tách (., ,) và ký hiệu tiền tệ
+                const digitsOnly = raw.replace(/[^0-9]/g, '');
+                const parsed = parseInt(digitsOnly, 10);
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+
             // Thêm sản phẩm vào giỏ hàng qua Firebase Realtime Database
             await cartService.addToCart(user.id, {
                 productId: product.id || Date.now().toString(),
                 name: product.title,
-                price: parseFloat(product.price) || 0,
+                price: parsePriceToNumber(product.price),
                 quantity: quantity,
                 image: product.image || 'https://via.placeholder.com/400',
                 description: product.description || '',

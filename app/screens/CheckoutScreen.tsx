@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CartItem } from '../services/CartService';
 import { orderService } from '../services/OrderService';
 import { cartService } from '../services/CartService';
+import { formatUSD } from '../utils/currency';
 
 interface RouteParams {
     cartItems?: CartItem[];
@@ -24,10 +25,13 @@ export default function CheckoutScreen() {
     const [name, setName] = useState(user?.fullName || '');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
-    const [shippingFee, setShippingFee] = useState(30000);
+    // USD
+    const [shippingFee, setShippingFee] = useState(30);
     const [loading, setLoading] = useState(false);
     
     const finalTotal = totalAmount + shippingFee;
+
+ 
 
     // Thanh toán trực tiếp (COD)
     const handleCashPayment = async () => {
@@ -64,7 +68,7 @@ export default function CheckoutScreen() {
             
             Alert.alert(
                 '✅ Đặt hàng thành công!',
-                `Đơn hàng của bạn đã được ghi nhận.\n\nThông tin:\n- Mã đơn hàng: ${orderId}\n- Người nhận: ${name}\n- SĐT: ${phone}\n- Tổng tiền: ${finalTotal.toLocaleString('vi-VN')}đ\n\nVui lòng chuẩn bị tiền mặt khi nhận hàng.`,
+                `Đơn hàng của bạn đã được ghi nhận.\n\nThông tin:\n- Mã đơn hàng: ${orderId}\n- Người nhận: ${name}\n- SĐT: ${phone}\n- Tổng tiền: $${finalTotal.toLocaleString('en-US')}\n\nVui lòng chuẩn bị tiền mặt khi nhận hàng.`,
                 [
                     {
                         text: 'OK',
@@ -203,7 +207,7 @@ export default function CheckoutScreen() {
                                 <Text className="text-gray-500 text-[12px]">SL: {item.quantity}</Text>
                             </View>
                             <Text className="text-gray-800 font-semibold">
-                                {((item.price * item.quantity) || 0).toLocaleString('vi-VN')}đ
+                                {formatUSD((item.price * item.quantity) || 0)}
                             </Text>
                         </View>
                     ))}
@@ -211,19 +215,19 @@ export default function CheckoutScreen() {
                     <View className="border-t border-gray-300 mt-3 pt-3">
                         <View className="flex-row justify-between mb-2">
                             <Text className="text-gray-600">Tạm tính:</Text>
-                            <Text className="text-gray-800">{totalAmount.toLocaleString('vi-VN')}đ</Text>
+                               <Text className="text-gray-800">{formatUSD(totalAmount)}</Text>
                         </View>
                         
                         <View className="flex-row justify-between mb-2">
                             <Text className="text-gray-600">Phí vận chuyển:</Text>
-                            <Text className="text-gray-800">{shippingFee.toLocaleString('vi-VN')}đ</Text>
+                               <Text className="text-gray-800">{formatUSD(shippingFee)}</Text>
                         </View>
                         
                         <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-300">
                             <Text className="text-[18px] font-bold text-gray-800">Tổng cộng:</Text>
-                            <Text className="text-[20px] font-bold text-green-600">
-                                {finalTotal.toLocaleString('vi-VN')}đ
-                            </Text>
+                               <Text className="text-[20px] font-bold text-green-600">
+                                   {formatUSD(finalTotal)}
+                               </Text>
                         </View>
                     </View>
                 </View>
