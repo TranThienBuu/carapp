@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { orderService, Order } from '../services/OrderService';
+import { formatUSD } from '../utils/currency';
 
 const AdminOrdersScreen = ({ navigation }: any) => {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -158,7 +159,8 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                 <Text style={[
                     styles.filterTabText,
                     selectedStatus === 'all' && styles.filterTabTextActive
-                ]}>
+                ]}
+                numberOfLines={1}>
                     Tất cả ({orders.length})
                 </Text>
             </TouchableOpacity>
@@ -178,7 +180,8 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                         <Text style={[
                             styles.filterTabText,
                             selectedStatus === option.value && styles.filterTabTextActive
-                        ]}>
+                        ]}
+                        numberOfLines={1}>
                             {option.label} ({count})
                         </Text>
                     </TouchableOpacity>
@@ -231,7 +234,7 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                     </Text>
                 </View>
                 <Text style={styles.totalAmount}>
-                    {item.total.toLocaleString('vi-VN')}đ
+                    {formatUSD(item.total)}
                 </Text>
             </View>
 
@@ -322,7 +325,7 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                                             <Text style={styles.productQuantity}>SL: {item.quantity}</Text>
                                         </View>
                                         <Text style={styles.productPrice}>
-                                            {(item.price * item.quantity).toLocaleString('vi-VN')}đ
+                                            ${((item.price * item.quantity) || 0).toLocaleString('en-US')}
                                         </Text>
                                     </View>
                                 ))}
@@ -333,11 +336,11 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                                 <Text style={styles.sectionTitle}>Thanh toán</Text>
                                 <View style={styles.detailRow}>
                                     <Text style={styles.detailLabel}>Tạm tính:</Text>
-                                    <Text style={styles.detailValue}>{selectedOrder.subtotal.toLocaleString('vi-VN')}đ</Text>
+                                    <Text style={styles.detailValue}>${(selectedOrder.subtotal || 0).toLocaleString('en-US')}</Text>
                                 </View>
                                 <View style={styles.detailRow}>
                                     <Text style={styles.detailLabel}>Phí vận chuyển:</Text>
-                                    <Text style={styles.detailValue}>{selectedOrder.shippingFee.toLocaleString('vi-VN')}đ</Text>
+                                    <Text style={styles.detailValue}>${(selectedOrder.shippingFee || 0).toLocaleString('en-US')}</Text>
                                 </View>
                                 <View style={styles.detailRow}>
                                     <Text style={styles.detailLabel}>Phương thức:</Text>
@@ -349,7 +352,7 @@ const AdminOrdersScreen = ({ navigation }: any) => {
                                 </View>
                                 <View style={[styles.detailRow, styles.totalRow]}>
                                     <Text style={styles.totalLabel}>Tổng cộng:</Text>
-                                    <Text style={styles.totalValue}>{selectedOrder.total.toLocaleString('vi-VN')}đ</Text>
+                                    <Text style={styles.totalValue}>${(selectedOrder.total || 0).toLocaleString('en-US')}</Text>
                                 </View>
                             </View>
 
@@ -527,10 +530,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
+        paddingVertical: 6,
     },
     filterContent: {
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 6,
+        alignItems: 'center',
     },
     filterTab: {
         paddingHorizontal: 16,
@@ -538,6 +543,9 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: '#f0f0f0',
         marginRight: 8,
+        flexShrink: 0,
+        minHeight: 36,
+        justifyContent: 'center',
     },
     filterTabActive: {
         backgroundColor: '#006266',

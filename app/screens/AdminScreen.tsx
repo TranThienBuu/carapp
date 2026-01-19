@@ -452,16 +452,7 @@ const AdminScreen = ({ navigation }: any) => {
     // Render Users Tab
     const renderUsers = () => (
         <View style={styles.tabContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <Text style={styles.sectionTitle}>User Management</Text>
-                <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#6ab04c' }]}
-                    onPress={openAddModal}
-                >
-                    <Ionicons name="add" size={20} color="white" />
-                    <Text style={styles.actionButtonText}>Add User</Text>
-                </TouchableOpacity>
-            </View>
+            <Text style={styles.sectionTitle}>User Management</Text>
 
             {users.map(user => (
                 <View key={user.id} style={styles.card}>

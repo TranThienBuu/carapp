@@ -6,6 +6,7 @@ import CryptoJS from 'crypto-js';
 import { mockDataService } from '../services/MockDataService';
 import { orderService } from '../services/OrderService';
 import { cartService } from '../services/CartService';
+import { formatUSD } from '../utils/currency';
 
 interface PaymentScreenProps {
   route?: any;
@@ -306,7 +307,7 @@ export default function PaymentScreen({ route, navigation }: PaymentScreenProps)
           <View className="flex-row justify-between items-center border-t border-gray-200 pt-3">
             <Text className="text-[18px] font-semibold">Tổng tiền:</Text>
             <Text className="text-[24px] font-bold text-green-600">
-              {amount.toLocaleString('vi-VN')} đ
+              {formatUSD(amount)}
             </Text>
           </View>
         </View>

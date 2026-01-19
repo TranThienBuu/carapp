@@ -15,7 +15,7 @@ type RouteParams = {
   orderId: string;
 };
 
-const formatCurrency = (value: number) => `${(value || 0).toLocaleString('vi-VN')}đ`;
+const formatCurrency = (value: number) => `$${(value || 0).toLocaleString('en-US')}`;
 
 const getStatusText = (status: Order['status']) => {
   const texts: Record<Order['status'], string> = {

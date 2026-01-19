@@ -41,8 +41,24 @@ class CartService {
             const existingItems = await this.getCartItems(userId);
             const existingItem = existingItems.find(i => i.productId === item.productId);
             if (existingItem) {
-                // Nếu đã có, cập nhật số lượng
-                await this.updateCartItemQuantity(userId, existingItem.id, existingItem.quantity + item.quantity);
+                // Nếu đã có, cập nhật số lượng + đồng bộ lại giá/thông tin (fix trường hợp trước đó parse sai giá)
+                const nextQuantity = existingItem.quantity + item.quantity;
+                await this.updateCartItemQuantity(userId, existingItem.id, nextQuantity);
+
+                const res = await fetch(
+                    `https://carapp-eb690-default-rtdb.asia-southeast1.firebasedatabase.app/carts/${userId}/${existingItem.id}.json?auth=${idToken}`,
+                    {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            price: item.price,
+                            name: item.name,
+                            image: item.image,
+                            description: item.description,
+                        }),
+                    }
+                );
+                if (!res.ok) throw new Error('Permission denied');
                 return existingItem.id;
             } else {
                 // Nếu chưa có, thêm mới
